@@ -1,10 +1,13 @@
 set(headers ${headers}
 	src/DebugHandler.h
+	src/DebugUIMenu.h
+	src/DrawHandler.h
 	src/DrawMenu.h
 	src/EventSink.h
-	src/hooks.h
-	src/HUDHandler.h
-	src/logger.h
+	src/Linalg.h
+	src/MCM.h
 	src/PCH.h
-	src/Utils.h
-	)
+	src/UIHandler.h
+	src/hooks.h
+	src/logger.h
+)

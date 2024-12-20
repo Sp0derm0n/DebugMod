@@ -1,8 +1,11 @@
 set(sources ${sources}
 	src/DebugHandler.cpp
+	src/DebugUIMenu.cpp
+	src/DrawHandler.cpp
 	src/DrawMenu.cpp
 	src/EventSink.cpp
-	src/HUDHandler.cpp
+	src/Linalg.cpp
+	src/MCM.cpp
+	src/UIHandler.cpp
 	src/main.cpp
-	src/Utils.cpp
-	)
+)

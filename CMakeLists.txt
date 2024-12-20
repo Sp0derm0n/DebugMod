@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-set(NAME "DrawFunctions") # no spaces in title
+set(NAME "DebugMenu")
 set(VERSION 1.0.0)
 
 # ------- Define project ----------
@@ -46,9 +46,6 @@ add_subdirectory("$ENV{CommonLibSSEPath_NG}" CommonLibSSE EXCLUDE_FROM_ALL)
 if(DEFINED ENV{SKYRIM_MODS_FOLDER} AND IS_DIRECTORY "$ENV{SKYRIM_MODS_FOLDER}")
     set(OUTPUT_FOLDER "$ENV{SKYRIM_MODS_FOLDER}/${PROJECT_NAME}")
 endif()
-
-#find_package(CommonLibSSE CONFIG REQUIRED)
-#add_commonlibsse_plugin(${PROJECT_NAME} SOURCES ${headers} ${sources})
 
 add_library(
 	${PROJECT_NAME}

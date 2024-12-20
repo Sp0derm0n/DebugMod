@@ -1,6 +1,10 @@
 .idea
 .vs
-.vscode/settings.json
+_gallery
 build
 cmake-build*
 notes
+src/todo.txt
+swf/*.swf
+swf/DebugMenu/*.swf
+swf/DrawMenu/*.swf

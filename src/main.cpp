@@ -2,22 +2,37 @@
 #include "EventSink.h"
 #include "DrawMenu.h"
 #include "hooks.h"
-#include "HUDHandler.h"
 #include "DebugHandler.h"
+#include "DebugUIMenu.h"
+#include "MCM.h"
+#include "Linalg.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
-    switch (a_message->type) {
-        case SKSE::MessagingInterface::kDataLoaded: {
+    switch (a_message->type) 
+	{
+        case SKSE::MessagingInterface::kDataLoaded: 
+		{
+			MCM::Register();
+			MCM::DebugMenuMCM::ReadSettings(true);			
+
 			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(EventSink::GetSingleton());
+			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESCellFullyLoadedEvent>(EventSink::GetSingleton());
+
 			DrawMenu::Register();
-			DebugHandler::GetSingleton()->init();
-			HUDHandler::GetSingleton()->init();
-			//SKSE::AllocTrampoline(14);
+			DebugMenu::Register();
+			DebugHandler::GetSingleton()->Init();
+
 			Hooks::Hook_PlayerUpdate::install();
-			//Hooks::OnUpdateHook::Install();
-			//Hooks::Hook_CameraUpdate::Install();
-			//Hooks::MainUpdateHook::Install();
+			Hooks::Hook_CellLoad::install();
+			Hooks::Hook_NavMeshLoad::install();
+
+			if (!MCM::settings::modActive)
+			{
+				logger::info("Plugin currently disabled in MCM");
+			}
         }
+		break;
+
     }
 }
 

@@ -1,43 +1,124 @@
 ﻿#include "DrawMenu.h"
-#include "Utils.h"
+#include "Linalg.h"
+#include "DebugHandler.h"
+#include "DrawHandler.h"
+
+void DrawMenu::Register()
+{
+	auto ui = RE::UI::GetSingleton();
+	if (ui) 
+	{
+		ui->Register(MENU_NAME, Creator);
+		logger::info("Registered menu '{}'", MENU_NAME);
+	}
+}
+
+RE::UI_MESSAGE_RESULTS DrawMenu::ProcessMessage(RE::UIMessage& a_message)
+{
+	if (a_message.type == RE::UI_MESSAGE_TYPE::kShow) 
+		DrawHandler::GetSingleton()->isMenuOpen = true;
+
+	else if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) 
+		DrawHandler::GetSingleton()->isMenuOpen = false;
+
+	return RE::UI_MESSAGE_RESULTS::kHandled;
+}
+
+void DrawMenu::OpenMenu()
+{
+	if (auto UIMessageQueue = RE::UIMessageQueue::GetSingleton())
+		UIMessageQueue->AddMessage(MENU_NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
+}
+
+void DrawMenu::CloseMenu()
+{
+	if (auto UIMessageQueue = RE::UIMessageQueue::GetSingleton())
+		UIMessageQueue->AddMessage(MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+}
 
 void DrawMenu::clearCanvas()
 {
 	if (movie)
 	{ 
 		movie->Invoke("clear", nullptr, nullptr, 0);
-
-		/*
-		if (const auto TES = RE::TES::GetSingleton(); TES)
-		{
-			//logger::info("TES obtained");
-			TES->ForEachReferenceInRange(RE::PlayerCharacter::GetSingleton(), 1000.0f, [&](RE::TESObjectREFR* a_ref)
-			{	
-				auto base = a_ref->GetBaseObject();
-				if (a_ref->As<RE::TESObjectREFR>() != RE::PlayerCharacter::GetSingleton() && (a_ref->Is(RE::FormType::NPC) || base && base->Is(RE::FormType::NPC)))
-				{
-					if (auto actor = a_ref->As<RE::Actor>(); actor)
-					{
-						if (!actor->IsDisabled() && !actor->IsDead() && actor->Get3D())
-						{
-							//logger::info("actor: {}", actor->GetDisplayFullName());
-							auto [screenPosition1, scale1] = worldPositionToScreenPosition(actor->GetPosition());
-							//g_DrawMenu->DrawPoint(screenPosition1, 15*scale1, 0xFFFFFF, 30);
-							//DrawPoint(PointData(actor->GetPosition(), 15*scale1, 0xFFFFFF, 30));
-							DrawPoint(screenPosition1, 20*scale1, 0xFFFFFF, 90);
-						}	
-					}
-				}
-				return RE::BSContainer::ForEachResult::kContinue;
-			});
-		}*/
 	}
+}
+
+void DrawMenu::GetInfoBox(RE::GFxValue& a_infoBox)
+{
+	RE::GFxValue root;
+	if (movie)
+	{
+		movie->GetVariable(&root, "_root");
+	}
+	else logger::info("Movie not obtained");
+
+	if (!root.IsObject())
+	{
+		logger::info("Root not obtained");
+		return;
+	}
+
+	root.GetMember("infoBox", &a_infoBox);
+}
+
+void DrawMenu::ShowInfoBox()
+{
+	RE::GFxValue infoBox;
+	GetInfoBox(infoBox);
+
+	auto res = infoBox.Invoke("Show", nullptr, nullptr, 0);
+}
+
+void DrawMenu::HideInfoBox()
+{
+	RE::GFxValue infoBox;
+	GetInfoBox(infoBox);
+
+	auto res = infoBox.Invoke("Hide", nullptr, nullptr, 0);
+}
+
+void DrawMenu::SetScroll(int32_t& a_scroll, bool a_scrollUp)
+{
+	RE::GFxValue infoBox;
+	GetInfoBox(infoBox);
+
+	RE::GFxValue getMaxScroll;
+	bool res = infoBox.Invoke("GetMaxScroll", &getMaxScroll, nullptr, 0);
+
+	int maxScroll = getMaxScroll.GetNumber();
+	if (a_scroll > maxScroll) a_scroll = maxScroll;
+
+	RE::GFxValue argsScroll{ a_scroll };
+	if (a_scrollUp) res = infoBox.Invoke("ScrollUp", nullptr, &argsScroll, 1);
+	else res = infoBox.Invoke("ScrollDown", nullptr, &argsScroll, 1);
+	
+	//logger::info("Trying to set scroll to: {}, res: {}", a_scroll, res);
+}
+
+void DrawMenu::SetInfoText(const std::string& a_text)
+{
+	RE::GFxValue infoBox;
+	GetInfoBox(infoBox);
+
+	RE::GFxValue argsText{ a_text };
+	auto res = infoBox.Invoke("SetText", nullptr, &argsText, 1);
+
+	RE::GFxValue _lastTextLine;
+	infoBox.Invoke("GetLastLine", &_lastTextLine, nullptr, 0);
+
+	SetScroll(DrawHandler::GetSingleton()->infoBoxScroll, false);
+	ShowInfoBox();
 }
 
 
 void DrawMenu::DrawPoint(RE::NiPoint2 a_position, float a_radius, uint32_t a_color, uint32_t a_alpha)
 {
-	if (!movie) return;
+	if (!movie) 
+	{
+		logger::info("Movie not obtained");
+		return;
+	}
 
 	// The angle of each of the eight segments is 45 degrees (360 divided by 8), which
 	// equals π/4 radians.
@@ -81,12 +162,10 @@ void DrawMenu::DrawPoint(RE::NiPoint2 a_position, float a_radius, uint32_t a_col
 
 	movie->Invoke("endFill", nullptr, nullptr, 0);
 }
-
-void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startRadius, float a_endRadius, uint32_t a_color, uint32_t a_alpha)
+void DrawMenu::DrawSimpleLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha) 
 {
 	if (!movie) return;
 
-	/*
 	RE::GFxValue argsLineStyle[3]{a_thickness, a_color, a_alpha};
 	movie->Invoke("lineStyle", nullptr, argsLineStyle, 3);
 
@@ -97,14 +176,14 @@ void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startR
 	movie->Invoke("lineTo", nullptr, argsEndPos, 2);
 
 	movie->Invoke("endFill", nullptr, nullptr, 0);
-	*/
+}
+
+
+void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startRadius, float a_endRadius, uint32_t a_color, uint32_t a_alpha)
+{
+	if (!movie) return;
 
 	constexpr float theta = 3.14159265359 / 4;
-
-	
-	//float ctrlDist = a_endRadius / cosf(angleDelta / 2.f);
-
-
 
 	RE::NiPoint2 endDirection{a_end.y-a_start.y, a_start.x-a_end.x}; // rotates a vector 90 deg clockwise is achived by newx = oldy, newy = -oldx
 	RE::NiPoint2 startDirection = endDirection/endDirection.Length() * a_startRadius;
@@ -174,6 +253,86 @@ void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startR
 		movie->Invoke("curveTo", nullptr, argsCurveTo, 4);
 	}
 
+	movie->Invoke("endFill", nullptr, nullptr, 0);
+}
+
+
+void DrawMenu::DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha)
+{
+	if (!movie) return;
+
+	/**/
+	RE::GFxValue argsLineStyle[3]{ a_borderThickness, a_color, a_borderAlpha};
+	movie->Invoke("lineStyle", nullptr, argsLineStyle, 3);
+
+	RE::GFxValue argsFill[2]{ a_color, a_baseAlpha };
+	movie->Invoke("beginFill", nullptr, argsFill, 2);
+
+	RE::GFxValue argsStartPos[2]{ a_positions[0].x, a_positions[0].y};
+	movie->Invoke("moveTo", nullptr, argsStartPos, 2);
+	/*
+	for (int i = 1; i < 3; i++)
+	{
+		RE::GFxValue argsNextPos[2]{ a_positions[i].x, a_positions[i].y};
+		movie->Invoke("lineTo", nullptr, argsNextPos, 2);
+	}
+	movie->Invoke("lineTo", nullptr, argsStartPos, 2);
+
+	int first = a_positions.size()-1;
+	int last = 2;
+	int sgn = 1;
+	int count = 0;
+	while (first != last && count < 100)
+	{
+		count++;
+		logger::info("first, last, {}, {}", first, last );
+		RE::GFxValue argsFirstPos[2]{ a_positions[first].x, a_positions[first].y};
+		RE::GFxValue argsLastPos[2]{ a_positions[last].x, a_positions[last].y};
+
+		movie->Invoke("lineTo", nullptr, argsFirstPos, 2);
+		movie->Invoke("lineTo", nullptr, argsLastPos, 2);
+
+		if (first - last > -1.5 && first - last < 1.5) break;
+
+		int placeholder = first;
+		first = last + sgn;
+		if (first == last) break;
+		last = placeholder - sgn;
+		logger::info("after change: first, last, {}, {}", first, last);
+		sgn *= -1;
+	} 
+
+	movie->Invoke("endFill", nullptr, nullptr, 0);
+	*/
+
+	//*
+	for (int i = 1; i < a_positions.size(); i++)
+	{
+		RE::GFxValue argsNextPos[2]{ a_positions[i].x, a_positions[i].y};
+		movie->Invoke("lineTo", nullptr, argsNextPos, 2);
+	}
+	movie->Invoke("endFill", nullptr, nullptr, 0);
+	//*/
+}
+
+void DrawMenu::DrawTriangle(RE::NiPoint2 a_positions[3], uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha)
+{
+	if (!movie) return;
+
+	RE::GFxValue argsLineStyle[3]{ 2, a_color, a_borderAlpha};
+	movie->Invoke("lineStyle", nullptr, argsLineStyle, 3);
+
+	RE::GFxValue argsFill[2]{ a_color, a_baseAlpha };
+	movie->Invoke("beginFill", nullptr, argsFill, 2);
+
+	RE::GFxValue argsStartPos[2]{ a_positions[0].x, a_positions[0].y};
+	movie->Invoke("moveTo", nullptr, argsStartPos, 2);
+
+	for (uint16_t i = 1; i < 3; i++)
+	{
+		RE::GFxValue argsNextPos[2]{ a_positions[i].x, a_positions[i].y};
+		movie->Invoke("lineTo", nullptr, argsNextPos, 2);
+	}
 	movie->Invoke("endFill", nullptr, nullptr, 0);
 }
 
