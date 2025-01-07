@@ -6,7 +6,7 @@ class DebugMenu : public RE::IMenu
 		constexpr static const char* MENU_PATH = "DebugMenu";
 		constexpr static const char* MENU_NAME = "DebugMenu";
 
-		enum BUTTON
+		enum BUTTON // Register button in Init()
 		{
 			kDayNight,
 			kCellBorder,
@@ -16,9 +16,12 @@ class DebugMenu : public RE::IMenu
 			kNavMeshPlus,
 			kNavMeshMinus,
 			kNavMeshMode,
+			kNavMeshTriangles,
+			kNavMeshCover,
 			kOcclusion,
 			kOcclusionPlus,
 			kOcclusionMinus,
+			kCoordinates,
 		};
 
 		enum class BUTTON_STATE

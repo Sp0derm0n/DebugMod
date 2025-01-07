@@ -20,6 +20,7 @@ namespace MCM
 	};
 
 	void Register();
+	void InitNonMCMSettings();
 	
 	struct settings
 	{
@@ -38,7 +39,11 @@ namespace MCM
 		static inline bool showCellWalls;
 		static inline bool showCellQuads;
 		static inline bool showNavmesh;
+		static inline bool showNavmeshTriangles;
+		static inline bool showNavmeshCover;
 		static inline bool showOcclusion;
+		static inline bool showCoordinates;
+		static inline bool showCoverBeams;
 
 		static inline float infoRange;
 		static inline float canvasScale;
@@ -55,7 +60,12 @@ namespace MCM
 		static inline uint32_t navmeshDoorColor;
 		static inline uint32_t navmeshWaterColor;
 		static inline uint32_t navmeshPrefferedColor;
-		static inline uint32_t navmeshEdgeLinkColor;
+		static inline uint32_t navmeshCellEdgeLinkColor;
+		static inline uint32_t navmeshLedgeEdgeLinkColor;
+		static inline uint32_t navmeshCoverColor;
+		static inline uint32_t navmeshCoverBorderColor;
+		static inline uint32_t navmeshMaxCoverColor;
+		static inline uint32_t navmeshMaxCoverBorderColor;
 		static inline uint32_t occlusionColor;
 		static inline uint32_t occlusionBorderColor;
 
@@ -66,8 +76,23 @@ namespace MCM
 		static inline uint32_t navmeshAlpha;
 		static inline uint32_t navmeshBorderAlpha;
 		static inline uint32_t navmeshEdgeLinkAlpha;
+		static inline uint32_t navmeshCoverAlpha;
+		static inline uint32_t navmeshCoverBorderAlpha;
+		static inline uint32_t navmeshMaxCoverAlpha;
+		static inline uint32_t navmeshMaxCoverBorderAlpha;
 		static inline uint32_t occlusionAlpha;
 		static inline uint32_t occlusionBorderAlpha;
 
+		// Advanced
+		static inline bool showMoreNavmeshSourcefiles;
+		static inline bool showNavmeshCoverInfo;
+		static inline bool showNavmeshCoverLines;
+		
+		static inline uint32_t linesHeight;
+
+		// Non MCM settings
+		static inline bool useRuntimeNavmesh;
+		static inline float minRange;
+		static inline float maxRange;
 	};
 }

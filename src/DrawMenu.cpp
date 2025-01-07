@@ -44,7 +44,7 @@ void DrawMenu::clearCanvas()
 	}
 }
 
-void DrawMenu::GetInfoBox(RE::GFxValue& a_infoBox)
+void DrawMenu::GetBox(RE::GFxValue& a_box, const char* a_boxName)
 {
 	RE::GFxValue root;
 	if (movie)
@@ -59,29 +59,29 @@ void DrawMenu::GetInfoBox(RE::GFxValue& a_infoBox)
 		return;
 	}
 
-	root.GetMember("infoBox", &a_infoBox);
+	root.GetMember(a_boxName, &a_box);
 }
 
-void DrawMenu::ShowInfoBox()
+void DrawMenu::ShowBox(const char* a_boxName)
 {
-	RE::GFxValue infoBox;
-	GetInfoBox(infoBox);
+	RE::GFxValue box;
+	GetBox(box, a_boxName);
 
-	auto res = infoBox.Invoke("Show", nullptr, nullptr, 0);
+	auto res = box.Invoke("Show", nullptr, nullptr, 0);
 }
 
-void DrawMenu::HideInfoBox()
+void DrawMenu::HideBox(const char* a_boxName)
 {
-	RE::GFxValue infoBox;
-	GetInfoBox(infoBox);
+	RE::GFxValue box;
+	GetBox(box, a_boxName);
 
-	auto res = infoBox.Invoke("Hide", nullptr, nullptr, 0);
+	auto res = box.Invoke("Hide", nullptr, nullptr, 0);
 }
 
 void DrawMenu::SetScroll(int32_t& a_scroll, bool a_scrollUp)
 {
 	RE::GFxValue infoBox;
-	GetInfoBox(infoBox);
+	GetBox(infoBox, "infoBox");
 
 	RE::GFxValue getMaxScroll;
 	bool res = infoBox.Invoke("GetMaxScroll", &getMaxScroll, nullptr, 0);
@@ -99,7 +99,7 @@ void DrawMenu::SetScroll(int32_t& a_scroll, bool a_scrollUp)
 void DrawMenu::SetInfoText(const std::string& a_text)
 {
 	RE::GFxValue infoBox;
-	GetInfoBox(infoBox);
+	GetBox(infoBox, "infoBox");
 
 	RE::GFxValue argsText{ a_text };
 	auto res = infoBox.Invoke("SetText", nullptr, &argsText, 1);
@@ -108,7 +108,20 @@ void DrawMenu::SetInfoText(const std::string& a_text)
 	infoBox.Invoke("GetLastLine", &_lastTextLine, nullptr, 0);
 
 	SetScroll(DrawHandler::GetSingleton()->infoBoxScroll, false);
-	ShowInfoBox();
+	ShowBox("infoBox");
+}
+
+void DrawMenu::SetCoordinates(float a_x, float a_y, float a_z)
+{
+	RE::GFxValue coordinatesBox;
+	GetBox(coordinatesBox, "coordinatesBox");
+
+	const std::string xString = fmt::format("x: {:>10.0f}", a_x);
+	const std::string yString = fmt::format("y: {:>10.0f}", a_y);
+	const std::string zString = fmt::format("z: {:>10.0f}", a_z);
+
+	RE::GFxValue argsText[3]; argsText[0] = xString; argsText[1] = yString; argsText[2] = zString;
+	auto res = coordinatesBox.Invoke("SetCoordinates", nullptr, argsText, 3);
 }
 
 
@@ -257,12 +270,13 @@ void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startR
 }
 
 
-void DrawMenu::DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha)
+void DrawMenu::DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderColor, uint32_t a_borderAlpha)
 {
 	if (!movie) return;
 
 	/**/
-	RE::GFxValue argsLineStyle[3]{ a_borderThickness, a_color, a_borderAlpha};
+
+	RE::GFxValue argsLineStyle[3]{ a_borderThickness, a_borderColor, a_borderAlpha};
 	movie->Invoke("lineStyle", nullptr, argsLineStyle, 3);
 
 	RE::GFxValue argsFill[2]{ a_color, a_baseAlpha };

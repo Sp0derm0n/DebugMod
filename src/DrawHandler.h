@@ -55,6 +55,7 @@ class DrawHandler
 			float borderThickness;
 			uint32_t color;
 			uint32_t baseAlpha;
+			uint32_t borderColor;
 			uint32_t borderAlpha;
 			std::string info;
 		};
@@ -99,11 +100,10 @@ class DrawHandler
 
 		void DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100);
 		void DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100, bool a_isSimpleLine = true);
-		void DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness = 2, uint32_t a_color = 0xFFFFFF, uint32_t a_baseAlpha = 50, uint32_t a_borderAlpha = 0, std::string a_info = "");
+		void DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness = 2, uint32_t a_color = 0xFFFFFF, uint32_t a_baseAlpha = 50, uint32_t a_borderAlpha = 0, std::string a_info = "", uint32_t a_borderColor = 0xFFFFFF, bool a_useCustomBorderColor = false);
 
 		void InfoBoxScrollUp();
 		void InfoBoxScrollDown();
-
 
 	private:
 		void DrawPoints();

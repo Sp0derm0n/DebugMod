@@ -67,7 +67,7 @@ namespace Hooks
 		{
 			_Load(a_navmesh, a_mod);
 
-			if (MCM::settings::modActive)
+			if (MCM::settings::modActive && MCM::settings::showMoreNavmeshSourcefiles)
 			{
 				DebugHandler::GetSingleton()->OnNavMeshLoad(a_navmesh);
 			}

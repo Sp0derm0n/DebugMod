@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 set(NAME "DebugMenu")
-set(VERSION 1.0.0)
+set(VERSION 1.1.0)
 
 # ------- Define project ----------
 
@@ -97,7 +97,7 @@ if(DEFINED OUTPUT_FOLDER)
         VERBATIM
     )
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
         add_custom_command(
             TARGET "${PROJECT_NAME}"
             POST_BUILD

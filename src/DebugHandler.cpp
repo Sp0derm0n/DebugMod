@@ -15,7 +15,7 @@ void DebugHandler::Init()
 }
 
 // usually <1 µs per file, sometimes ~10 and very rarely 20.
-void DebugHandler::OnCellLoad(RE::TESObjectCELL* a_cell)
+void DebugHandler::OnCellLoad(RE::TESObjectCELL* const& a_cell)
 {
 	// the sourceFiles array of the navmeshes only contain the first (when not bugged) and last file that edits it. the cell load is called by all mods editing the cell, so we just get the sourceFiles on all these loads
 	if (!a_cell || !a_cell->GetRuntimeData().navMeshes) 
@@ -30,33 +30,39 @@ void DebugHandler::OnCellLoad(RE::TESObjectCELL* a_cell)
 	}
 }
 
-
-// if a navmesh is not referenced by a new mod, sometimes a_cell->GetRuntimeData().navMeshes will not be defined, 
-// so to get the navmesh count, use OnNavMeshLoad.
+// if a navmesh is not referenced by a new mod, sometimes a_cell->GetRuntimeData().navMeshes will not be defined,
+// but it can still be found in the nav mesh load
 // 
 // on the other hand, on navmesh load, the source array will only display one of the base game (+dlc) .esps (i think), 
 // but on cell load, new mods can also be found, though it wont always find eg. heathfires.esm when the navmesh is defined in
 // skyrim.esm, but these are somethimes caught on navmesh load
 
 // usually <1 µs per file, sometimes ~10 and very rarely 20.
-void DebugHandler::OnNavMeshLoad(RE::NavMesh* a_navmesh)
+void DebugHandler::OnNavMeshLoad(RE::NavMesh* const& a_navmesh)
 {
 	if(!a_navmesh) return;
 
 	RE::FormID formID = a_navmesh->GetFormID();
+	
+	
 
 	if (auto cell = a_navmesh->GetSaveParentCell(); cell)
 	{
 		CacheNavmesh(a_navmesh, cell->GetFormID());
 	}
 
+	if (!a_navmesh->sourceFiles.array) return;
+
 	RE::TESFile** files = a_navmesh->sourceFiles.array->data();
 	int numberOfFiles = a_navmesh->sourceFiles.array->size();
 
+	// somehow the code below causes the navmesh to fuck up sometimes
+
 	// yoinked from more informative console sauce https://github.com/Liolel/More-Informative-Console/blob/1613cda4ec067e86f97fb6aae4a7c85533afe031/src/Scaleform/MICScaleform_GetReferenceInfo.cpp#L57
 	if ((formID >> 24) == 0x00)  //Refs from Skyrim.ESM will have 00 for the first two hexidecimal digits
-	{								 //And refs from all other mods will have a non zero value, so a bitwise && of those two digits with FF will be nonzero for all non Skyrim.ESM mods
-		if (numberOfFiles == 0 || std::string(files[0]->fileName) != "Skyrim.esm")
+	{						     //And refs from all other mods will have a non zero value, so a bitwise && of those two digits with FF will be nonzero for all non Skyrim.ESM mods
+		
+		if (numberOfFiles == 0 || std::string(files[0]->GetFilename()) != "Skyrim.esm")
 		{
 			if (!sourceFiles[formID].contains("Skyrim.esm"))
 			{
@@ -65,6 +71,7 @@ void DebugHandler::OnNavMeshLoad(RE::NavMesh* a_navmesh)
 			}
 		}
 	}
+
 	for (int i = 0; i < numberOfFiles; i++)
 	{
 		if (!sourceFiles[formID].contains(files[i]->GetFilename()))
@@ -106,10 +113,14 @@ void DebugHandler::CacheNavmesh(RE::NavMesh* a_navmesh, RE::FormID a_cellID)
 	cachedNavmeshes[a_cellID].push_back(newInfo);
 }
 
-void DebugHandler::CacheCellNavmeshes(RE::TESObjectCELL* a_cell) // call on cell fully loaded
+void DebugHandler::CacheCellNavmeshes(const RE::TESObjectCELL* a_cell) // call on cell fully loaded
 {
 	auto cellID = a_cell->GetFormID();
-	if (!a_cell->GetRuntimeData().navMeshes) return;
+
+	if (!a_cell->GetRuntimeData().navMeshes) 
+	{
+		return;
+	}
 
 	for (const auto& navmesh : a_cell->GetRuntimeData().navMeshes->navMeshes)
 	{
@@ -117,47 +128,12 @@ void DebugHandler::CacheCellNavmeshes(RE::TESObjectCELL* a_cell) // call on cell
 	}
 }
 
-void DebugHandler::GetTrianglesInfo(NavmeshInfo& a_navmeshInfo, RE::FormID a_cellID)
-{
-	// for each triangle, loop if it has an edge link to another triangle, get the form id of the navmesh that triangle belongs to,
-	// and check if it is in the same cell. If not, the edge link is a cell border edge link
-	for (int i = 0; i < a_navmeshInfo.triangles.size(); i++)
-	{
-		const auto& triangle = a_navmeshInfo.triangles[i];
-		uint16_t triangleFlag = triangle.triangleFlags.underlying();
-		
-		TriangleInfo triangleInfo({false, false, false});
-
-		for (int edge = 0; edge < 3; edge++)
-		{
-			uint16_t edgeLinkFlag = 1 << edge;
-			if (!(triangleFlag & edgeLinkFlag)) continue;
-
-			// see bottom for notes on the edge link indices
-			auto linkedTriangleIndex = triangle.triangles[edge];
-
-			auto otherID = a_navmeshInfo.extraEdgeInfo[linkedTriangleIndex].portal.otherMeshID;
-			bool isOtherNavmeshInOtherCell = true;
-			for (const auto& navmesh_ : cachedNavmeshes[a_cellID])
-			{
-				if (navmesh_.formID == otherID)
-				{
-					isOtherNavmeshInOtherCell = false;
-					break;
-				}
-			}
-			triangleInfo.cellBorderEdgeLink[edge] = isOtherNavmeshInOtherCell;
-		}
-		a_navmeshInfo.trianglesInfo.push_back(triangleInfo);
-	}
-}
-
 void DebugHandler::DrawAll()
 {
 	g_DrawHandler->ClearAll();
 	if (MCM::settings::showCellBorders) DrawCellBorders();
-	if (MCM::settings::showNavmesh) DrawNavmesh(MCM::settings::navmeshRange);
-	if (MCM::settings::showOcclusion) DrawOcclusion(MCM::settings::occlusionRange);
+	if (MCM::settings::showNavmesh) DrawNavmesh(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::navmeshRange);
+	if (MCM::settings::showOcclusion) DrawOcclusion(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::occlusionRange);
 	//DrawTest();
 }
 
@@ -181,7 +157,7 @@ void DebugHandler::DrawTest()
 
 bool DebugHandler::isAnyDebugON()
 {
-	return MCM::settings::showCellBorders || MCM::settings::showNavmesh || MCM::settings::showOcclusion;
+	return MCM::settings::showCellBorders || MCM::settings::showNavmesh || MCM::settings::showOcclusion || MCM::settings::showCoordinates;
 }
 
 void DebugHandler::OpenDrawMenu()
@@ -208,16 +184,6 @@ void DebugHandler::Update(float a_delta)
 		g_UI->Update();
 	}
 
-	if (g_DrawHandler && g_DrawHandler->isMenuOpen == false)
-	{
-		if (hasDebugMenuBeenOpenedBefore && isAnyDebugON())
-			OpenDrawMenu();
-		else
-			return;
-	}
-	else if (!isAnyDebugON())
-		CloseDrawMenu();
-
 	timeSinceLastUpdate += a_delta;
 
 	if (g_DrawHandler && g_DrawHandler->g_DrawMenu)
@@ -229,9 +195,39 @@ void DebugHandler::Update(float a_delta)
 			DrawAll();
 		}
 		g_DrawHandler->Update(a_delta);
+		ShowCoordinates();
+	}
+
+	// has to be lowest in this function
+	if (g_DrawHandler && g_DrawHandler->isMenuOpen == false)
+	{
+		if (hasDebugMenuBeenOpenedBefore && isAnyDebugON())
+			OpenDrawMenu();
+		else
+			return;
+	}
+	else if (!isAnyDebugON())
+		CloseDrawMenu();
+}
+
+void DebugHandler::ShowCoordinates()
+{
+	if (MCM::settings::showCoordinates)
+	{
+		if (!isCoordinatesBoxVisible) 
+		{
+			g_DrawHandler->g_DrawMenu->ShowBox("coordinatesBox");
+			isCoordinatesBoxVisible = true;
+		}
+		RE::NiPoint3 playerPosition = RE::PlayerCharacter::GetSingleton()->GetPosition();
+		g_DrawHandler->g_DrawMenu->SetCoordinates(playerPosition.x, playerPosition.y, playerPosition.z);
+	}
+	else if (isCoordinatesBoxVisible)
+	{
+		g_DrawHandler->g_DrawMenu->HideBox("coordinatesBox");
+		isCoordinatesBoxVisible = false;
 	}
 }
-	
 
 void DebugHandler::DrawCellBorders()
 {
@@ -438,186 +434,391 @@ void DebugHandler::DrawCellBorders()
 	}
 }
 
-void DebugHandler::DrawNavmesh(float a_range)
+void DebugHandler::ForEachCellInRange(RE::NiPoint3 a_origin, float a_range, std::function<void(const RE::TESObjectCELL* a_cell)> a_callback)
 {
-	const auto originPos = RE::PlayerCharacter::GetSingleton()->GetPosition();
-
-	if (auto cell = RE::PlayerCharacter::GetSingleton()->parentCell; cell && cell->IsInteriorCell())
+	if (const auto* TES = RE::TES::GetSingleton(); TES)
 	{
-		DrawNavmesh(cell, originPos, a_range);
-	}
-	else if (const auto* TES = RE::TES::GetSingleton(); TES)
-	{
-		if (const auto gridLength = TES->gridCells ? TES->gridCells->length : 0; gridLength > 0)
+		if (TES->interiorCell)
 		{
-			const float yPlus = originPos.y + a_range;
-			const float yMinus = originPos.y - a_range;
-			const float xPlus = originPos.x + a_range;
-			const float xMinus = originPos.x - a_range;
+			a_callback(TES->interiorCell);
+		}
+		else if (const auto gridLength = TES->gridCells ? TES->gridCells->length : 0; gridLength > 0)
+		{
+			const float yPlus = a_origin.y + a_range;
+			const float yMinus = a_origin.y - a_range;
+			const float xPlus = a_origin.x + a_range;
+			const float xMinus = a_origin.x - a_range;
 
 			for (uint32_t x = 0; x < gridLength; x++)
 			{
 				for (uint32_t y = 0; y < gridLength; y++)
 				{
-					if (RE::TESObjectCELL* cell = TES->gridCells->GetCell(x, y); cell && cell->IsAttached())
+					if (const auto cell = TES->gridCells->GetCell(x, y); cell && cell->IsAttached())
 					{
 						if (const auto cellCoords = cell->GetCoordinates(); cellCoords)
 						{
 							const RE::NiPoint2 worldPos{ cellCoords->worldX, cellCoords->worldY };
 							if (worldPos.x < xPlus && (worldPos.x + 4096.0f) > xMinus && worldPos.y < yPlus && (worldPos.y + 4096.0f) > yMinus) // if some of the cell is in range
 							{
-								DrawNavmesh(cell, originPos, a_range);
+								a_callback(cell);
 							}
 						}
 					}
-					//else logger::info("Failed to get cell at {}, {} offset from player", x, y);
 				}
+			}
+		}
+		if (const auto ws = TES->GetRuntimeData2().worldSpace) 
+		{
+			if (const auto skyCell = ws ? ws->GetSkyCell() : nullptr; skyCell) 
+			{
+				a_callback(skyCell);
 			}
 		}
 	}
 }
 
-void DebugHandler::DrawNavmesh(RE::TESObjectCELL* a_cell, RE::NiPoint3 a_origin, float a_range)
+void DebugHandler::DrawNavmesh(RE::NiPoint3 a_origin, float a_range)
 {
-	RE::FormID cellID = a_cell->GetFormID();
-
-	if (!cachedNavmeshes.contains(cellID))
+	ForEachCellInRange(a_origin, a_range, [&](const RE::TESObjectCELL* a_cell)
 	{
-		return;
-	}
+		RE::FormID cellID = a_cell->GetFormID();
 
-	if (isCellsCacheFinalized[cellID] == false)
-	{
-		if (a_cell->GetRuntimeData().navMeshes);
+		if (isCellsCacheFinalized[cellID] == false)
 		{
-			CacheCellNavmeshes(a_cell);
-		}
-		isCellsCacheFinalized[cellID] = true;
-	}
-
-	//if(a_cell->GetRuntimeData().navMeshes) 
-	// make loop // logger::info(" navmesh {:X} address: {:X}", navmesh.formID, reinterpret_cast<uintptr_t>(a_cell->GetRuntimeData().navMeshes->navMeshes[bob].get()));
-
-
-	for (auto& navmesh : cachedNavmeshes[cellID])
-	{
-		auto& vertices = navmesh.vertices;
-		auto& triangles = navmesh.triangles;
-
-		std::string infoStr = GetNavmeshInfo(navmesh.formID, a_cell);
-
-		for (const auto vertex : vertices)
-		{
-			
-			break; // dont draw vertices
-			auto dx = a_origin.x - vertex.location.x;
-			auto dy = a_origin.y - vertex.location.y;
-			if (sqrtf(dx*dx + dy*dy) < a_range)
-				g_DrawHandler->DrawPoint(vertex.location, 4, 0xFFFFFF, 90);
-		}	
-
-		for (int i = 0; i < triangles.size(); i++)
-		{
-			const auto& triangle = triangles[i];
-			uint16_t triangleFlag = triangle.triangleFlags.underlying();
-
-
-			if (!useRuntimeNavmesh && !(triangleFlag & inFileFlag))
+			if (a_cell->GetRuntimeData().navMeshes);
 			{
-				if (i + 2 < triangles.size())
+				CacheCellNavmeshes(a_cell);
+			}
+			isCellsCacheFinalized[cellID] = true;
+		}
+
+		if (!cachedNavmeshes.contains(cellID))
+		{
+			return;
+		}
+		
+		/*
+		if (a_cell->GetRuntimeData().navMeshes)
+		{
+		
+			logger::debug("CELL: {:X} {}", cellID, a_cell->GetFormEditorID());
+			for (const auto& navmesh : a_cell->GetRuntimeData().navMeshes->navMeshes)
+			{
+				logger::debug(" navmesh {:X} address: {:X}", navmesh->formID, reinterpret_cast<uintptr_t>(navmesh.get()));
+			}
+		}//*/
+
+
+
+		for (auto& navmesh : cachedNavmeshes[cellID])
+		{
+			auto& vertices = navmesh.vertices;
+			auto& triangles = navmesh.triangles;
+
+			std::string infoStr = GetNavmeshInfo(navmesh.formID, a_cell);
+
+			for (const auto vertex : vertices)
+			{
+			
+				break; // dont draw vertices
+				auto dx = a_origin.x - vertex.location.x;
+				auto dy = a_origin.y - vertex.location.y;
+				if (dx*dx + dy*dy < a_range * a_range)
+					g_DrawHandler->DrawPoint(vertex.location, 4, 0xFFFFFF, 90);
+			}	
+
+			for (int i = 0; i < triangles.size(); i++)
+			{
+				const auto& triangle = triangles[i];
+				uint16_t triangleFlag = triangle.triangleFlags.underlying();
+
+
+				if (!MCM::settings::useRuntimeNavmesh && !(triangleFlag & inFileFlag))
 				{
-					bool isNextTriangleInFile = triangles[i+1].triangleFlags.underlying() & inFileFlag;
-					bool isNextNextTriangleInFile = triangles[i+2].triangleFlags.underlying() & inFileFlag;
-					if (!isNextTriangleInFile && !isNextNextTriangleInFile)
+					if (i + 2 < triangles.size())
 					{
-						break; // sometimes (very rarely) a triangle in the middle of the array has no inFileFlag, so if the next two triangles are in file, don't break
+						bool isNextTriangleInFile = triangles[i+1].triangleFlags.underlying() & inFileFlag;
+						bool isNextNextTriangleInFile = triangles[i+2].triangleFlags.underlying() & inFileFlag;
+						if (!isNextTriangleInFile && !isNextNextTriangleInFile)
+						{
+							break; // sometimes (very rarely) a triangle in the middle of the array has no inFileFlag, so if the next two triangles are in file, don't break
+						}
+					}
+				}
+
+				if (MCM::settings::useRuntimeNavmesh && triangle.triangleFlags.all(RE::BSNavmeshTriangle::TriangleFlag::kOverlapping))
+				{
+					continue;
+				}
+
+				bool skip = false;
+				for (const auto i : triangle.vertices)
+				{
+					auto dx = a_origin.x - vertices[i].location.x;
+					auto dy = a_origin.y - vertices[i].location.y;
+					if (sqrtf(dx*dx + dy*dy) > a_range) 
+					{
+						skip = true;
+						break;
+					}
+				}
+				if (skip) continue;
+				if (triangle.triangleFlags.any(RE::BSNavmeshTriangle::TriangleFlag::kDeleted)) 
+				{
+					continue;
+				}
+				uint32_t triangleColor = MCM::settings::navmeshColor;
+
+				if (triangleFlag & doorFlag) 
+					triangleColor = MCM::settings::navmeshDoorColor;
+
+				else if (triangleFlag & waterFlag) 
+					triangleColor = MCM::settings::navmeshWaterColor;
+
+				else if (triangle.triangleFlags.any(RE::BSNavmeshTriangle::TriangleFlag::kPreferred)) 
+					triangleColor = MCM::settings::navmeshPrefferedColor;
+
+				float borderThickness = triangleColor == MCM::settings::navmeshColor ? 4.0f : 5.0f;
+
+				auto vertex0 = vertices[triangle.vertices[0]].location;
+				auto vertex1 = vertices[triangle.vertices[1]].location;
+				auto vertex2 = vertices[triangle.vertices[2]].location;
+			
+				if (MCM::settings::showNavmeshTriangles)
+				{
+					g_DrawHandler->DrawPolygon({ vertex0, vertex1, vertex2 }, borderThickness, triangleColor, MCM::settings::navmeshAlpha, MCM::settings::navmeshBorderAlpha, infoStr);
+				
+					for (int edge = 0; edge < 3; edge++)
+					{
+						uint16_t edgeFlag = 1 << edge;
+						if (triangleFlag & edgeFlag)
+						{
+							uint16_t edgeInfoIndex = triangle.triangles[edge];
+							if (edgeInfoIndex < navmesh.extraEdgeInfo.size())
+							{
+								uint32_t edgeLinkColor = MCM::settings::navmeshCellEdgeLinkColor;
+								uint32_t edgeLinkAlpha = MCM::settings::navmeshEdgeLinkAlpha;
+								EdgeLinkPosition edgeLinkPosition = EdgeLinkPosition::kCenter;
+								if (navmesh.extraEdgeInfo.data()[edgeInfoIndex].type.any(RE::EDGE_EXTRA_INFO_TYPE::kLedgeUp))
+								{
+									edgeLinkColor = MCM::settings::navmeshLedgeEdgeLinkColor;
+									edgeLinkAlpha = static_cast<uint32_t>(100 - (100 - edgeLinkAlpha)*(100 - edgeLinkAlpha)/100.0f); // cell border edgelinks usually overlap almost entirely, so their combined opacity is probably (1-(1-opacity)^2), ie. if they are at 20% opcaity, combined they are probably at 7% opacity
+									edgeLinkPosition = EdgeLinkPosition::kAbove;
+								}
+								else if (navmesh.extraEdgeInfo.data()[edgeInfoIndex].type.any(RE::EDGE_EXTRA_INFO_TYPE::kLedgeDown))
+								{
+									edgeLinkColor = MCM::settings::navmeshLedgeEdgeLinkColor;
+									edgeLinkAlpha = static_cast<uint32_t>(100 - (100 - edgeLinkAlpha)*(100 - edgeLinkAlpha)/100.0f);
+									edgeLinkPosition = EdgeLinkPosition::kBelow;
+								}
+
+								DrawNavmeshEdgeLink(vertices[triangle.vertices[edge]].location, vertices[triangle.vertices[edge == 2 ? 0 : edge+1]].location, edgeLinkColor, edgeLinkAlpha, edgeLinkPosition);
+							}
+						}
+					}
+				}			
+
+				// quarter flag = height of 16 units,
+				// half flag = height of 32 units,
+				// tri flag = height of 64 units,
+				// full flag = height of 128 units
+
+				if (MCM::settings::showNavmeshCover)
+				{
+					bool isLeftCover = false;
+					bool isRightCover = false;
+					int32_t height = 0;
+
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_CoverValueQuarter)) height += 16;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_CoverValueHalf)) height += 32;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_CoverValueTri)) height += 64;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_CoverValueFull)) height += 128;
+
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_Left)) isLeftCover = true;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge0_Right)) isRightCover= true;
+
+					if (height) 
+					{
+
+						DrawNavmeshCover(vertex0, vertex1, height, isLeftCover, isRightCover);
+					}
+
+					height = 0;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_CoverValueQuarter)) height += 16;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_CoverValueHalf)) height += 32;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_CoverValueTri)) height += 64;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_CoverValueFull)) height += 128;
+
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_Left)) isLeftCover = true;
+					if (triangle.traversalFlags.any(RE::BSNavmeshTriangle::TraversalFlag::kEdge1_Right)) isRightCover= true;
+
+					if (height) 
+					{
+						DrawNavmeshCover(vertex1, vertex2, height, isLeftCover, isRightCover);
 					}
 				}
 			}
-
-			if (useRuntimeNavmesh && triangle.triangleFlags.all(RE::BSNavmeshTriangle::TriangleFlag::kOverlapping))
-			{
-				continue;
-			}
-
-			bool skip = false;
-			for (const auto i : triangle.vertices)
-			{
-				auto dx = a_origin.x - vertices[i].location.x;
-				auto dy = a_origin.y - vertices[i].location.y;
-				if (sqrtf(dx*dx + dy*dy) > a_range) 
-				{
-					skip = true;
-					break;
-				}
-			}
-			if (skip) continue;
-			if (triangle.triangleFlags.any(RE::BSNavmeshTriangle::TriangleFlag::kDeleted)) 
-			{
-				continue;
-			}	
-			uint32_t triangleColor = MCM::settings::navmeshColor;
-
-			if (triangleFlag & doorFlag) 
-				triangleColor = MCM::settings::navmeshDoorColor;
-
-			else if (triangleFlag & waterFlag) 
-				triangleColor = MCM::settings::navmeshWaterColor;
-
-			else if (triangle.triangleFlags.any(RE::BSNavmeshTriangle::TriangleFlag::kPreferred)) 
-				triangleColor = MCM::settings::navmeshPrefferedColor;
-
-			float borderThickness = triangleColor == MCM::settings::navmeshColor ? 4.0f : 5.0f;
-
-			auto vertex0 = vertices[triangle.vertices[0]];
-			auto vertex1 = vertices[triangle.vertices[1]];
-			auto vertex2 = vertices[triangle.vertices[2]];
-
-			
-
-			g_DrawHandler->DrawPolygon({ vertex0.location, vertex1.location, vertex2.location }, borderThickness, triangleColor, MCM::settings::navmeshAlpha, MCM::settings::navmeshBorderAlpha, infoStr);
-
-			if (!navmesh.hasTriangleInfo)
-			{
-				GetTrianglesInfo(navmesh, cellID);
-				navmesh.hasTriangleInfo = true;
-			}
-
-			for (int edge = 0; edge < 3; edge++)
-			{
-				if (navmesh.trianglesInfo[i].cellBorderEdgeLink[edge])
-				{
-					DrawNavmeshEdgeLink(vertices[triangle.vertices[edge]].location, vertices[triangle.vertices[edge == 2 ? 0 : edge+1]].location, MCM::settings::navmeshEdgeLinkColor);
-				}
-			}
 		}
-	}
+	});
 }
 
-void DebugHandler::DrawNavmeshEdgeLink(const RE::NiPoint3& a_point1, const RE::NiPoint3& a_point2, uint32_t a_color)
+void DebugHandler::DrawNavmeshEdgeLink(const RE::NiPoint3& a_point1, const RE::NiPoint3& a_point2, uint32_t a_color, uint32_t a_alpha, EdgeLinkPosition a_position)
 {
 	RE::NiPoint3 directionAlongLine = a_point2 - a_point1;
 	RE::NiPoint3 center = (a_point1 + a_point2)/2;
 
-	float boxHalfHeight = 12;
+	float boxHeight = 24.0f;
+	float heightAbove; 
+	float heightBelow;
 	directionAlongLine /= 5;
+
+	switch (a_position)
+	{
+		case EdgeLinkPosition::kAbove:
+		{
+			heightAbove = boxHeight * 5/6.0f;
+			heightBelow = boxHeight * 1/6.0f;
+			break;
+		}
+		case EdgeLinkPosition::kCenter:
+		{
+			heightAbove = boxHeight / 2;
+			heightBelow = boxHeight / 2;
+			break;
+		}
+		case EdgeLinkPosition::kBelow:
+		{
+			heightAbove = boxHeight * 1/6.0f;
+			heightBelow = boxHeight * 5/6.0f;
+			break;
+		}
+	}
 	
-	RE::NiPoint3 corner1 = center + directionAlongLine; corner1.z += boxHalfHeight;
-	RE::NiPoint3 corner2 = center + directionAlongLine; corner2.z -= boxHalfHeight;
-	RE::NiPoint3 corner3 = center - directionAlongLine; corner3.z -= boxHalfHeight;
-	RE::NiPoint3 corner4 = center - directionAlongLine; corner4.z += boxHalfHeight;
+	RE::NiPoint3 corner1 = center + directionAlongLine; corner1.z += heightAbove;
+	RE::NiPoint3 corner2 = center + directionAlongLine; corner2.z -= heightBelow;
+	RE::NiPoint3 corner3 = center - directionAlongLine; corner3.z -= heightBelow;
+	RE::NiPoint3 corner4 = center - directionAlongLine; corner4.z += heightAbove;
 
 	std::vector<RE::NiPoint3> polygon{ corner1, corner2, corner3, corner4 };
 
-
-	g_DrawHandler->DrawPolygon(polygon, 0, a_color, MCM::settings::navmeshEdgeLinkAlpha, 0);
+	g_DrawHandler->DrawPolygon(polygon, 0, a_color, a_alpha, 0);
 }
 
-void DebugHandler::DrawOcclusion(float a_range)
+void DebugHandler::DrawNavmeshCover(const RE::NiPoint3& a_rightPoint, const RE::NiPoint3& a_leftPoint, int32_t a_height, bool a_left, bool a_right)
 {
-	if (const auto TES = RE::TES::GetSingleton(); TES)
+	if (!MCM::settings::showCoverBeams)
 	{
-		TES->ForEachReferenceInRange(RE::PlayerCharacter::GetSingleton(), a_range, [&](RE::TESObjectREFR* a_ref)
+		a_left = false;
+		a_right = false;
+	}
+	// maybe horizontal line every 16 or 32 height?
+	uint32_t color = MCM::settings::navmeshCoverColor;
+	uint32_t alpha = MCM::settings::navmeshCoverAlpha;
+	uint32_t borderColor = MCM::settings::navmeshCoverBorderColor;
+	uint32_t borderAlpha = MCM::settings::navmeshCoverBorderAlpha;
+
+	float height = static_cast<float>(a_height);
+
+	if (a_height == 240)
+	{
+		color = MCM::settings::navmeshMaxCoverColor;
+		alpha = MCM::settings::navmeshMaxCoverAlpha;
+		borderColor = MCM::settings::navmeshMaxCoverBorderColor;
+		borderAlpha = MCM::settings::navmeshMaxCoverBorderAlpha;
+	}
+	else if (a_height < 64) // cover is ledge cover
+	{
+		height = -height;
+	}
+
+	RE::NiPoint3 directionAlongLine = a_rightPoint - a_leftPoint;
+	float directionAlongLineLength = directionAlongLine.Length();
+	RE::NiPoint3 unitDirectionAlongLine = directionAlongLine/directionAlongLineLength;
+
+	float borderThickness = 3.0f;
+	float coverBeamWidth = 20.0f;
+	if (directionAlongLineLength < coverBeamWidth) coverBeamWidth = directionAlongLineLength * 0.4f;
+
+	RE::NiPoint3 leftOffset = unitDirectionAlongLine*coverBeamWidth;
+	RE::NiPoint3 rightOffset = -leftOffset;
+
+	if (!a_left) leftOffset = RE::NiPoint3(0.0f, 0.0f, 0.0f);
+	if (!a_right) rightOffset = RE::NiPoint3(0.0f, 0.0f, 0.0f);
+
+	// Draw cover
+	RE::NiPoint3 corner1 = a_leftPoint + leftOffset*1.02; 
+	RE::NiPoint3 corner2 = a_leftPoint + leftOffset*1.02;   corner2.z += height;
+	RE::NiPoint3 corner3 = a_rightPoint + rightOffset*1.02; corner3.z += height;
+	RE::NiPoint3 corner4 = a_rightPoint + rightOffset*1.02; 
+
+	std::vector<RE::NiPoint3> polygon{ corner1, corner2, corner3, corner4 };
+
+	g_DrawHandler->DrawPolygon(polygon, borderThickness, color, alpha, borderAlpha, "", borderColor, true);
+
+	// Draw horizontal lines on cover to visualize height
+	if (MCM::settings::showNavmeshCoverLines)
+	{
+		uint32_t stepSize = MCM::settings::linesHeight;
+		for (int step = stepSize; step < a_height; step += stepSize)
+		{
+			int8_t multiplier = a_height < 64 ? -1 : 1;
+			RE::NiPoint3 point1 = corner1; point1.z += multiplier * step;
+			RE::NiPoint3 point2 = corner4; point2.z += multiplier * step;
+			g_DrawHandler->DrawLine(point1, point2, borderThickness, borderColor, borderAlpha);
+		}
+	}
+	
+
+	// Draw dot in the middle of the triangle edge to contain info:
+
+	if (MCM::settings::showNavmeshCoverInfo)
+	{
+		RE::NiPoint3 middle = a_leftPoint + directionAlongLine/2;
+		std::vector<RE::NiPoint3> dummyPolygon{ middle, middle, middle};
+
+		std::string infoStr = fmt::format("Cover height: {} units", a_height);
+		if (MCM::settings::showNavmeshCoverLines) infoStr += fmt::format("\nSubsections height: {} units", MCM::settings::linesHeight);
+		infoStr += fmt::format("\nLedge: {}", height < 0);
+		infoStr += fmt::format("\nRight:  {}", a_right);
+		infoStr += fmt::format("\nLeft:    {}", a_left);
+
+
+		// draw invisible dummy polygon to able to show info since info can only be shown by looking at polygon corners
+		g_DrawHandler->DrawPolygon(dummyPolygon, 0, 0x000000, 0, 0, infoStr);
+		g_DrawHandler->DrawPoint(middle, 10, borderColor, borderAlpha);
+	}
+
+	
+	// Draw end beams
+	alpha *= 2;
+	if (a_left)
+	{
+		corner1 = a_leftPoint;
+		corner2 = a_leftPoint;				 corner2.z += height;
+		corner3 = a_leftPoint + leftOffset;  corner3.z += height;
+		corner4 = a_leftPoint + leftOffset;
+
+		std::vector<RE::NiPoint3> beamPolygon{ corner1, corner2, corner3, corner4 };
+		g_DrawHandler->DrawPolygon(beamPolygon, 0.0f, 0x000000, alpha, 0);
+	}
+
+	if (a_right)
+	{
+		corner1 = a_rightPoint;
+		corner2 = a_rightPoint;				  corner2.z += height;
+		corner3 = a_rightPoint + rightOffset; corner3.z += height;
+		corner4 = a_rightPoint + rightOffset;
+
+		std::vector<RE::NiPoint3> beamPolygon{ corner1, corner2, corner3, corner4 };
+		g_DrawHandler->DrawPolygon(beamPolygon, 0.0f, 0x000000, alpha, 0);
+	}
+}
+
+void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
+{
+	ForEachCellInRange(a_origin, a_range, [&](const RE::TESObjectCELL* a_cell)
+	{
+		a_cell->ForEachReferenceInRange(a_origin, a_range, [&](RE::TESObjectREFR* a_ref)
 		{	
 			if (a_ref->GetBaseObject()->formID == 0x17) // planemarker
 			{
@@ -632,8 +833,7 @@ void DebugHandler::DrawOcclusion(float a_range)
 						float yBound = *reinterpret_cast<float *>(primitiveAddr + 0x10);
 						float zBound = *reinterpret_cast<float *>(primitiveAddr + 0x14);
 						
-						PlaneMarker occlusion{ a_ref, RE::NiPoint3(2*xBound, 2*yBound, 2*zBound) };
-						std::string infoStr = GetOcclusionInfo(&occlusion);
+						std::string infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound));
 
 						auto M = a_ref->Get3D()->world.rotate;
 
@@ -674,10 +874,11 @@ void DebugHandler::DrawOcclusion(float a_range)
 			}
 			return RE::BSContainer::ForEachResult::kContinue;
 		});
-	}
+	});
+	
 }
 
-std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, RE::TESObjectCELL* a_cell)
+std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, const RE::TESObjectCELL* a_cell)
 {
 	std::string infoStr{ "CELL INFO" };
 
@@ -697,9 +898,9 @@ std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, RE::TESObjectCELL*
 		if (a_cell->IsExteriorCell())
 		{
 			infoStr += "\nCoordinates: ";
-			infoStr += std::to_string(a_cell->GetCoordinates()->cellX);
+			infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellX);
 			infoStr += ", ";
-			infoStr += std::to_string(a_cell->GetCoordinates()->cellY);
+			infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellY);
 		}
 	}
 
@@ -716,36 +917,42 @@ std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, RE::TESObjectCELL*
 	return infoStr;
 }
 
-std::string DebugHandler::GetOcclusionInfo(PlaneMarker* a_planeMarker)
+std::string DebugHandler::GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, RE::NiPoint3 a_bounds)
 {
-	RE::TESObjectREFR* ref = a_planeMarker->reference;
-	RE::FormID formID = ref->GetFormID();
+	RE::FormID formID = a_ref->GetFormID();
 
 	std::string infoStr{ "CELL INFO" };
-	RE::TESObjectCELL* cell = ref->GetParentCell();
-	if (!cell || cell->GetFormID() >> 24 == 0xFF)
+	if (!a_cell || a_cell->GetFormID() >> 24 == 0xFF)
 	{
-		infoStr += "\nNot available";
+		if (const auto* TES = RE::TES::GetSingleton(); TES)
+		{
+			a_cell = TES->GetCell(a_ref->GetPosition());
+		}
+		
+		if (a_cell->GetFormID() >> 24 == 0xFF)
+		{
+			infoStr += "\nNot available";
+		}
 	}
-	else
+	if (a_cell)
 	{
 		infoStr += "\nEditor ID: ";
-		infoStr += cell->GetFormEditorID();
-		infoStr += fmt::format("\nForm ID: {:08X}", cell->GetFormID());
+		infoStr += a_cell->GetFormEditorID();
+		infoStr += fmt::format("\nForm ID: {:08X}", a_cell->GetFormID());
 
 		infoStr += "\nCoordinates: ";
-		infoStr += std::to_string(cell->GetCoordinates()->cellX);
+		infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellX);
 		infoStr += ", ";
-		infoStr += std::to_string(cell->GetCoordinates()->cellY);
+		infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellY);
 	}
 
 	infoStr += "\n\nPLANEMARKER INFO";
 	infoStr += fmt::format("\nForm ID: {:08X}", formID);
-	infoStr += fmt::format("\nPosition: {:.0f}, {:.0f}, {:.0f}", ref->GetPositionX(), ref->GetPositionY(), ref->GetPositionZ());
-	infoStr += fmt::format("\nBounds: {:.0f}, {:.0f}, {:.0f}", a_planeMarker->bounds.x, a_planeMarker->bounds.y,a_planeMarker->bounds.z);
+	infoStr += fmt::format("\nPosition: {:.0f}, {:.0f}, {:.0f}", a_ref->GetPositionX(), a_ref->GetPositionY(), a_ref->GetPositionZ());
+	infoStr += fmt::format("\nBounds: {:.0f}, {:.0f}, {:.0f}", a_bounds.x, a_bounds.y, a_bounds.z);
 
 	infoStr += std::string("\nReferenced by:");
-	for (const auto& fileName : GetSouceFiles(ref))
+	for (const auto& fileName : GetSouceFiles(a_ref))
 	{
 		infoStr += "\nMod: ";
 		infoStr += std::string(fileName);
@@ -753,7 +960,7 @@ std::string DebugHandler::GetOcclusionInfo(PlaneMarker* a_planeMarker)
 	return infoStr;
 }
 
-std::string DebugHandler::GetQuadInfo(RE::TESObjectCELL* a_cell, uint8_t a_quad)
+std::string DebugHandler::GetQuadInfo(const RE::TESObjectCELL* a_cell, uint8_t a_quad)
 {
 	std::string infoStr{ "CELL INFO" };
 
@@ -772,10 +979,11 @@ std::string DebugHandler::GetQuadInfo(RE::TESObjectCELL* a_cell, uint8_t a_quad)
 		infoStr += fmt::format("\nForm ID: {:08X}", a_cell->GetFormID());
 		if (a_cell->IsExteriorCell())
 		{
+			;
 			infoStr += "\nCoordinates: ";
-			infoStr += std::to_string(a_cell->GetCoordinates()->cellX);
+			infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellX);
 			infoStr += ", ";
-			infoStr += std::to_string(a_cell->GetCoordinates()->cellY);
+			infoStr += std::to_string(a_cell->GetRuntimeData().cellData.exterior->cellY);
 		}
 	}
 

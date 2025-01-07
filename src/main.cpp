@@ -13,6 +13,7 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
         case SKSE::MessagingInterface::kDataLoaded: 
 		{
 			MCM::Register();
+			MCM::InitNonMCMSettings();
 			MCM::DebugMenuMCM::ReadSettings(true);			
 
 			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(EventSink::GetSingleton());
@@ -59,3 +60,12 @@ extern "C" __declspec( dllexport ) constinit auto SKSEPlugin_Version = []() {
 
 	return v;
 }();
+
+
+extern "C" __declspec( dllexport ) bool SKSEPlugin_Query(const SKSE::QueryInterface*, SKSE::PluginInfo* pluginInfo)
+{
+	pluginInfo->name = SKSEPlugin_Version.pluginName;
+	pluginInfo->infoVersion = SKSE::PluginInfo::kVersion;
+	pluginInfo->version = SKSEPlugin_Version.pluginVersion;
+	return true;
+}

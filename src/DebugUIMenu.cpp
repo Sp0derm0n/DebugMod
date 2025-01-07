@@ -5,7 +5,7 @@
 DebugMenu::DebugMenu()
 {
 	auto menu = static_cast<RE::IMenu*>(this);
-	menu->depthPriority = 1;
+	menu->depthPriority = 1; // must be higher than depth of draw menu
 	auto scaleformManager = RE::BSScaleformManager::GetSingleton();
 
 	const auto success = scaleformManager->LoadMovieEx(this, MENU_PATH, RE::GFxMovieView::ScaleModeType::kNoBorder, 0.0, [](RE::GFxMovieDef* a_def) -> void {
@@ -32,17 +32,20 @@ DebugMenu::DebugMenu()
 // Then, give the symbol an instance name when added to the MenuContainer symbol.
 void DebugMenu::Init()
 {
-	RegisterButton("dayNightIcon", BUTTON::kDayNight);
-	RegisterButton("cellBorderIcon", BUTTON::kCellBorder);
-	RegisterButton("wallsIcon",BUTTON::kCellWalls);
-	RegisterButton("quadsIcon", BUTTON::kCellQuads);
-	RegisterButton("navMeshIcon", BUTTON::kNavMesh);
-	RegisterButton("navMeshPlusIcon", BUTTON::kNavMeshPlus);
-	RegisterButton("navMeshMinusIcon", BUTTON::kNavMeshMinus);
-	RegisterButton("navMeshModeIcon", BUTTON::kNavMeshMode);
-	RegisterButton("occlusionIcon", BUTTON::kOcclusion);
-	RegisterButton("occlusionPlusIcon", BUTTON::kOcclusionPlus);
-	RegisterButton("occlusionMinusIcon", BUTTON::kOcclusionMinus);
+	RegisterButton("dayNightIcon",			BUTTON::kDayNight);
+	RegisterButton("cellBorderIcon",		BUTTON::kCellBorder);
+	RegisterButton("wallsIcon",				BUTTON::kCellWalls);
+	RegisterButton("quadsIcon",				BUTTON::kCellQuads);
+	RegisterButton("navMeshIcon",			BUTTON::kNavMesh);
+	RegisterButton("navMeshPlusIcon",		BUTTON::kNavMeshPlus);
+	RegisterButton("navMeshMinusIcon",		BUTTON::kNavMeshMinus);
+	RegisterButton("navMeshModeIcon",		BUTTON::kNavMeshMode);
+	RegisterButton("trianglesIcon",			BUTTON::kNavMeshTriangles);
+	RegisterButton("coverIcon",				BUTTON::kNavMeshCover);
+	RegisterButton("occlusionIcon",			BUTTON::kOcclusion);
+	RegisterButton("occlusionPlusIcon",		BUTTON::kOcclusionPlus);
+	RegisterButton("occlusionMinusIcon",	BUTTON::kOcclusionMinus);
+	RegisterButton("coordinatesIcon",		BUTTON::kCoordinates);
 }
 
 void DebugMenu::RegisterButton(const char* a_buttonName, BUTTON a_buttonType)

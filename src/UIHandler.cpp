@@ -11,8 +11,11 @@ void UIHandler::Init()
 	auto uiTask = [&]() 
 	{
 		auto g_Debug = DebugHandler::GetSingleton();
-		if (!g_Debug->hasDebugMenuBeenOpenedBefore) 
+		if (!g_Debug->hasDebugMenuBeenOpenedBefore)
+		{
+			MCM::DebugMenuMCM::ReadSettings(true);			
 			g_Debug->hasDebugMenuBeenOpenedBefore = true; // never sat to false again
+		}
 
 		GetDebugMenu();
 		canvasWidth = g_DebugMenu->movie->GetVisibleFrameRect().right;
@@ -45,6 +48,8 @@ void UIHandler::Init()
 			}
 		}
 
+		////////// CELL BORDERS /////////////////////////////////////////////////////////////////////////////////////////////
+
 		if (MCM::settings::showCellWalls)
 		{
 			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellWalls].name, "ON");
@@ -66,25 +71,53 @@ void UIHandler::Init()
 			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellQuads].name, "OFF");
 		}
 
+		////////// NAVMESH /////////////////////////////////////////////////////////////////////////////////////////////
+
+		if (MCM::settings::showNavmeshTriangles)
+		{
+			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "ON");
+			menuItems.buttons[BUTTON::kNavMeshTriangles].isActive = true;
+		}
+		if (MCM::settings::showNavmeshCover)
+		{
+			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "ON");
+			menuItems.buttons[BUTTON::kNavMeshCover].isActive = true;
+		}
+
 		if (MCM::settings::showNavmesh)
 		{
-
 			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMesh].name, "ON");
 			menuItems.buttons[BUTTON::kNavMesh].isActive = true;
 		}
-
-		if (g_Debug->useRuntimeNavmesh)
+		else
 		{
-			logger::info("Using runtime navmesh");
+			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "OFF");
+			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "OFF");
+		}
+
+		if (MCM::settings::useRuntimeNavmesh)
+		{
 			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshMode].name, "ON");
 			menuItems.buttons[BUTTON::kNavMeshMode].isActive = true;
 		}
+
+		////////// OCCLUSION /////////////////////////////////////////////////////////////////////////////////////////////
+
 
 		if (MCM::settings::showOcclusion)
 		{
 			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kOcclusion].name, "ON");
 			menuItems.buttons[BUTTON::kOcclusion].isActive = true;
 		}
+
+		////////// COORDINATES /////////////////////////////////////////////////////////////////////////////////////////////
+
+		if (MCM::settings::showCoordinates)
+		{
+			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCoordinates].name, "ON");
+			menuItems.buttons[BUTTON::kCoordinates].isActive = true;
+		}
+
 	};
 	SKSE::GetTaskInterface()->AddUITask(uiTask);
 }
@@ -206,12 +239,24 @@ void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
 		case BUTTON::kNavMesh : 
 		{
 			MCM::settings::showNavmesh = a_isActive;
+
+			if (!a_isActive)
+			{
+				// show cellWalls and cellQuad buttons as off (no need to change the isActive status, as they won't be shown anyway when cellborders are not active
+				if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "OFF");
+				if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "OFF");
+			}
+			else
+			{
+				if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "ON");
+				if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "ON");
+			}
 			break;
 		}
 		case BUTTON::kNavMeshPlus : 
 		{
 			float currentRange = MCM::settings::navmeshRange;
-			float maxRange = g_DebugHandler->maxRange;
+			float maxRange = MCM::settings::maxRange;
 			float step = MCM::settings::rangeStep;
 			float newRange = std::min(currentRange + step, maxRange);
 
@@ -223,7 +268,7 @@ void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
 		case BUTTON::kNavMeshMinus : 
 		{
 			float currentRange = MCM::settings::navmeshRange;
-			float minRange = g_DebugHandler->minRange;
+			float minRange = MCM::settings::minRange;
 			float step = MCM::settings::rangeStep;
 			float newRange = std::max(currentRange - step, minRange);
 
@@ -234,7 +279,17 @@ void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
 		}
 		case BUTTON::kNavMeshMode :
 		{
-			g_DebugHandler->useRuntimeNavmesh = a_isActive;
+			MCM::settings::useRuntimeNavmesh = a_isActive;
+			break;
+		}
+		case BUTTON::kNavMeshTriangles :
+		{
+			MCM::settings::showNavmeshTriangles = a_isActive;
+			break;
+		}
+		case BUTTON::kNavMeshCover :
+		{
+			MCM::settings::showNavmeshCover = a_isActive;
 			break;
 		}
 		case BUTTON::kOcclusion :
@@ -245,7 +300,7 @@ void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
 		case BUTTON::kOcclusionPlus :
 		{
 			float currentRange = MCM::settings::occlusionRange;
-			float maxRange = g_DebugHandler->maxRange;
+			float maxRange = MCM::settings::maxRange;
 			float step = MCM::settings::rangeStep;
 			float newRange = std::min(currentRange + step, maxRange);
 
@@ -256,13 +311,18 @@ void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
 		case BUTTON::kOcclusionMinus :
 		{
 			float currentRange = MCM::settings::occlusionRange;
-			float minRange = g_DebugHandler->minRange;
-			float step =MCM::settings::rangeStep;
+			float minRange = MCM::settings::minRange;
+			float step = MCM::settings::rangeStep;
 			float newRange = std::max(currentRange - step, minRange);
 
 			MCM::settings::occlusionRange = newRange;
 			g_DebugMenu->SetText("occlusionRangeText", newRange);
 
+			break;
+		}
+		case BUTTON::kCoordinates :
+		{
+			MCM::settings::showCoordinates = a_isActive;
 			break;
 		}
 	}

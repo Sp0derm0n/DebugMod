@@ -37,6 +37,7 @@ namespace MCM
 		ReadBoolSetting(ini, "Main", "bShowInfoOnHover",	settings::showInfoOnHover);
 		ReadBoolSetting(ini, "Main", "bShowCrosshair",		settings::showCrosshair);
 		ReadBoolSetting(ini, "Main", "bShowCanvasBorder",	settings::showCanvasBorder);
+		ReadBoolSetting(ini, "Main", "bShowCoverBeams",		settings::showCoverBeams);
 
 		if (a_firstRead) // only change these settings when the menu is opened for the first time
 		{
@@ -46,7 +47,10 @@ namespace MCM
 			ReadBoolSetting(ini, "Main", "bShowCellBorderWallsOnMenuOpen",	settings::showCellWalls);
 			ReadBoolSetting(ini, "Main", "bShowCellQuadsOnMenuOpen",		settings::showCellQuads);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshOnMenuOpen",			settings::showNavmesh);
+			ReadBoolSetting(ini, "Main", "bShowNavmeshTrianglesOnMenuOpen",	settings::showNavmeshTriangles);
+			ReadBoolSetting(ini, "Main", "bShowNavmeshCoverOnMenuOpen",		settings::showNavmeshCover);
 			ReadBoolSetting(ini, "Main", "bShowOcclusionOnMenuOpen",		settings::showOcclusion);
+			ReadBoolSetting(ini, "Main", "bShowCoordinatesOnMenuOpen",		settings::showCoordinates);
 
 			ReadFloatSetting(ini, "Main", "fNavmeshRange",			settings::navmeshRange);
 			ReadFloatSetting(ini, "Main", "fOcclusionRange",		settings::occlusionRange);
@@ -66,21 +70,37 @@ namespace MCM
 		ReadUInt32Setting(ini, "Colors", "uNavmeshDoorColor",				settings::navmeshDoorColor);
 		ReadUInt32Setting(ini, "Colors", "uNavmeshWaterColor",				settings::navmeshWaterColor);
 		ReadUInt32Setting(ini, "Colors", "uNavmeshPrefferedPathingColor",	settings::navmeshPrefferedColor);
-		ReadUInt32Setting(ini, "Colors", "uNavmeshEdgeLinkColor",			settings::navmeshEdgeLinkColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshCellEdgeLinkColor",		settings::navmeshCellEdgeLinkColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshLedgeEdgeLinkColor",		settings::navmeshLedgeEdgeLinkColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshCoverColor",				settings::navmeshCoverColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshCoverBorderColor",		settings::navmeshCoverBorderColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshMaxCoverColor",			settings::navmeshMaxCoverColor);
+		ReadUInt32Setting(ini, "Colors", "uNavmeshMaxCoverBorderColor",		settings::navmeshMaxCoverBorderColor);
 		ReadUInt32Setting(ini, "Colors", "uOcclusionColor",					settings::occlusionColor);
 		ReadUInt32Setting(ini, "Colors", "uOcclusionBorderColor",			settings::occlusionBorderColor);
 		
 
 		// Alpha
-		ReadUInt32Setting(ini, "Alpha", "uCellBorderAlpha",			settings::cellBorderAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uCellBorderWallsAlpha",	settings::cellWallsAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uCellQuadsAlpha",			settings::cellQuadsAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uNavmeshTrianglesAlpha",	settings::navmeshAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uNavmeshBordersAlpha",		settings::navmeshBorderAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uNavmeshEdgeLinkAlpha",	settings::navmeshEdgeLinkAlpha);
-		
-		ReadUInt32Setting(ini, "Alpha", "uOcclusionAlpha",			settings::occlusionAlpha);
-		ReadUInt32Setting(ini, "Alpha", "uOcclusionBorderAlpha",	settings::occlusionBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCellBorderAlpha",				settings::cellBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCellBorderWallsAlpha",		settings::cellWallsAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCellQuadsAlpha",				settings::cellQuadsAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshTrianglesAlpha",		settings::navmeshAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshBordersAlpha",			settings::navmeshBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshEdgeLinkAlpha",		settings::navmeshEdgeLinkAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshCoverAlpha",			settings::navmeshCoverAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshCoverBorderAlpha",		settings::navmeshCoverBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshMaxCoverAlpha",		settings::navmeshMaxCoverAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uNavmeshMaxCoverBorderAlpha",	settings::navmeshMaxCoverBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uOcclusionAlpha",				settings::occlusionAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uOcclusionBorderAlpha",		settings::occlusionBorderAlpha);
+
+		// Advanced
+		ReadBoolSetting(ini, "Advanced", "bShowMoreNavmeshSourcefiles",	settings::showMoreNavmeshSourcefiles);
+		ReadBoolSetting(ini, "Advanced", "bShowNavmeshCoverInfo",		settings::showNavmeshCoverInfo);
+		ReadBoolSetting(ini, "Advanced", "bShowNavmeshCoverLines",		settings::showNavmeshCoverLines);
+
+		ReadUInt32Setting(ini, "Advanced", "uLinesHeight",	settings::linesHeight);
+
 	}
 
 	void DebugMenuMCM::ReadSettings(bool a_firstRead)
@@ -135,5 +155,12 @@ namespace MCM
 		auto papyrus = SKSE::GetPapyrusInterface();
 		papyrus->Register(DebugMenuMCM::Register);
 		logger::info("Registered papyrus functions");
+	}
+
+	void InitNonMCMSettings()
+	{
+		settings::useRuntimeNavmesh = false;
+		settings::minRange = 500.0f;
+		settings::maxRange = 15000.0f;
 	}
 }

@@ -1,34 +1,93 @@
 {
     "version": 3,
-    "configurePresets": [
-        {
-            "name": "base",
-            "hidden": true,
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/${presetName}",
-            "installDir": "${sourceDir}/install/${presetName}",
-            "architecture": { "value": "x64", "strategy": "external" },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "cl.exe",
-                "CMAKE_CXX_FLAGS": "/permissive- /Zc:preprocessor /EHsc /MP /W4 -DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static",
-                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-            }
-        },
-        {
-            "name": "debug",
-            "inherits": ["base"],
-            "displayName": "Debug",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
-        },
-        {
-            "name": "release",
-            "inherits": ["base"],
-            "displayName": "Release",
-            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_CXX_FLAGS": "/permissive- /Zc:preprocessor /EHsc /MP /W4 -DWIN32_LEAN_AND_MEAN -DNOMINMAX -DUNICODE -D_UNICODE",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "vcpkg",
+      "hidden": true,
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+    },
+    {
+      "name": "win32",
+      "hidden": true,
+      "environment": {
+        "COMMONLIBSSE_PLATFORM": "-DWIN32_LEAN_AND_MEAN -DNOMINMAX"
+      }
+    },
+    {
+      "name": "win32-unicode",
+      "hidden": true,
+      "inherits": "win32",
+      "environment": {
+        "COMMONLIBSSE_TEXT": "-DUNICODE -D_UNICODE"
+      }
+    },
+    {
+      "name": "msvc",
+      "hidden": true,
+      "environment": {
+        "COMMONLIBSSE_COMPILER": "/permissive- /Zc:preprocessor /EHsc $penv{CXXFLAGS}",
+        "COMMONLIBSSE_TEXT": "-DUNICODE -D_UNICODE"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "windows-msvc-x64",
+          "enableMicrosoftCodeAnalysis": true,
+          "enableClangTidyCodeAnalysis": true
         }
-    ]
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": [
+        "base",
+        "vcpkg",
+        "win32-unicode",
+        "msvc"
+      ],
+      "displayName": "Debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "release",
+      "inherits": [
+        "base",
+        "vcpkg",
+        "win32-unicode",
+        "msvc"
+      ],
+      "displayName": "Release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "release-msvc",
+      "inherits": [
+        "base",
+        "vcpkg",
+        "win32-unicode",
+        "msvc"
+      ],
+      "displayName": "Release with pdb",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo" }
+    }
+  ]
 }

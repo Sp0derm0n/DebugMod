@@ -12,7 +12,8 @@ void DrawHandler::Init() // called on ui thread
 		logger::info("Failed to initialize camera handler");
 		return;
 	}
-	g_DrawMenu->HideInfoBox();
+	g_DrawMenu->HideBox("infoBox");
+	g_DrawMenu->HideBox("coordinatesBox");
 
 	canvasWidth = g_DrawMenu->canvasWidth;
 	canvasHeight = g_DrawMenu->canvasHeight;
@@ -156,7 +157,7 @@ void DrawHandler::DrawPolygons(float a_delta)
 		ScreenspacePolygon polygon = PolygonToScreenspace(clipPoints);
 		if (polygon.points.size() < 2) continue; // the polygon can only be drawn if it contains at least 3 points
 			
-		g_DrawMenu->DrawPolygon(polygon.points, polygonData->borderThickness*polygon.avgScale, polygonData->color, polygonData->baseAlpha, polygonData->borderAlpha);
+		g_DrawMenu->DrawPolygon(polygon.points, polygonData->borderThickness*polygon.avgScale, polygonData->color, polygonData->baseAlpha, polygonData->borderColor, polygonData->borderAlpha);
 
 
 
@@ -206,7 +207,7 @@ void DrawHandler::DrawPolygons(float a_delta)
 
 		if (isInfoBoxVisible)
 		{
-			g_DrawMenu->HideInfoBox();
+			g_DrawMenu->HideBox("infoBox");
 			isInfoBoxVisible = false;
 		}
 	}
@@ -549,9 +550,9 @@ void DrawHandler::DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thi
 	linesToDraw.push_back(std::make_unique<LineData>(a_start, a_end, a_thickness, a_color, a_alpha*alphaMultiplier, a_isSimpleLine));
 }
 
-void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, std::string a_info)
+void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, std::string a_info, uint32_t a_borderColor, bool a_useCustomBorderColor)
 {
-	polygonsToDraw.push_back(std::make_unique<PolygonData>(a_positions, a_borderThickness, a_color, a_baseAlpha*alphaMultiplier, a_borderAlpha*alphaMultiplier, a_info));
+	polygonsToDraw.push_back(std::make_unique<PolygonData>(a_positions, a_borderThickness, a_color, a_baseAlpha*alphaMultiplier, a_useCustomBorderColor ? a_borderColor : a_color, a_borderAlpha*alphaMultiplier, a_info));
 }
 
 // not used

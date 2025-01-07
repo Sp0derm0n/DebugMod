@@ -17,8 +17,9 @@ RE::BSEventNotifyControl EventSink::ProcessEvent(RE::InputEvent* const* eventPtr
 		if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) continue;//return RE::BSEventNotifyControl::kContinue;
 
 		uint32_t offset = 0;
-		if (event->GetDevice() == RE::INPUT_DEVICE::kMouse) offset = 256;
+		if (event->GetDevice() == RE::INPUT_DEVICE::kMouse /* || RE::INPUT_DEVICE::kGamepad*/) offset = 256;
 
+		//if(event->GetDevice() == RE::INPUT_DEVICE::kGamepad) logger::info("keycode: {}", event->AsButtonEvent()->GetIDCode());
 
 		auto* buttonEvent = event->AsButtonEvent();
 		auto dxScanCode = buttonEvent->GetIDCode();
@@ -27,10 +28,11 @@ RE::BSEventNotifyControl EventSink::ProcessEvent(RE::InputEvent* const* eventPtr
 
 		//////////////////// Configure code below /////////////////////////////////////
 
+		uint32_t keyCode = dxScanCode + offset;
+
 		if (!RE::UI::GetSingleton()->GameIsPaused()) // for what should only run when in game
 		{
-			uint32_t keyCode = dxScanCode + offset;
-
+			
 			if ( keyCode == MCM::settings::openMenuHotkey)
 			{
 				HandleDebugMenu(inputReleased);
@@ -48,11 +50,17 @@ RE::BSEventNotifyControl EventSink::ProcessEvent(RE::InputEvent* const* eventPtr
 				HandleScrollDown(inputReleased);
 			}
 		}
-		
 		// --------- for what can run whenever ----------------------------------------------
 
+		else if (UIHandler::GetSingleton()->isMenuOpen)
+		{
+			if ( keyCode == MCM::settings::openMenuHotkey)
+			{
+				HandleDebugMenu(inputReleased);
+				key1HasBeenProcessed = false;
+			}
+		}
 	}
-
 	return RE::BSEventNotifyControl::kContinue;
 }
 
