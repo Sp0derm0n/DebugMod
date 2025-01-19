@@ -134,7 +134,7 @@ void DebugHandler::DrawAll()
 	if (MCM::settings::showCellBorders) DrawCellBorders();
 	if (MCM::settings::showNavmesh) DrawNavmesh(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::navmeshRange);
 	if (MCM::settings::showOcclusion) DrawOcclusion(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::occlusionRange);
-    //DrawLightBulbs(RE::PlayerCharacter::GetSingleton()->GetPosition(), 4000.0f);
+    DrawLightBulbs(RE::PlayerCharacter::GetSingleton()->GetPosition(), 4000.0f);
 	//DrawTest();
 }
 
@@ -507,8 +507,7 @@ void DebugHandler::DrawNavmesh(RE::NiPoint3 a_origin, float a_range)
 			logger::debug("CELL: {:X} {}", cellID, a_cell->GetFormEditorID());
 			for (const auto& navmesh : a_cell->GetRuntimeData().navMeshes->navMeshes)
 			{
-				
-				debug(" navmesh {:X} address: {:X}", navmesh->formID, reinterpret_cast<uintptr_t>(navmesh.get()));
+				logger::debug(" navmesh {:X} address: {:X}", navmesh->formID, reinterpret_cast<uintptr_t>(navmesh.get()));
 			}
 		}//*/
 
@@ -843,12 +842,19 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 
 						if (a_ref->IsDisabled() || !AV) continue;
 
-						RE::NiMatrix3 M = AV->world.rotate; 
+						RE::NiMatrix3 M; // defaults to identity
 
 						uint32_t baseColor = MCM::settings::occlusionColor;
 
-						// infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound), false);
-						// define matrix by: a_ref->GetAngleX(), a_ref->GetAngleY(), a_ref->GetAngleZ()
+
+						logger::info("Disabled? {}", a_ref->IsDisabled());
+						if (AV) M = AV->world.rotate;
+						else
+						{
+							infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound), false);
+							baseColor = 0xFF0000;
+							// define matrix by: a_ref->GetAngleX(), a_ref->GetAngleY(), a_ref->GetAngleZ()
+						}
 						
 						RE::NiPoint3 center = a_ref->GetPosition();
 						RE::NiPoint3 upperLeft1  = M * RE::NiPoint3( +xBound, +yBound, +zBound ); 
@@ -892,7 +898,6 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 
 void DebugHandler::DrawLightBulbs(RE::NiPoint3 a_origin, float a_range)
 {
-	return;
 	/*
     ForEachCellInRange(a_origin, a_range, [&](const RE::TESObjectCELL* a_cell) 
 	{

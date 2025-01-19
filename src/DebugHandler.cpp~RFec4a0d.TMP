@@ -134,7 +134,6 @@ void DebugHandler::DrawAll()
 	if (MCM::settings::showCellBorders) DrawCellBorders();
 	if (MCM::settings::showNavmesh) DrawNavmesh(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::navmeshRange);
 	if (MCM::settings::showOcclusion) DrawOcclusion(RE::PlayerCharacter::GetSingleton()->GetPosition(), MCM::settings::occlusionRange);
-    //DrawLightBulbs(RE::PlayerCharacter::GetSingleton()->GetPosition(), 4000.0f);
 	//DrawTest();
 }
 
@@ -223,6 +222,8 @@ void DebugHandler::ShowCoordinates()
 			isCoordinatesBoxVisible = true;
 		}
 		RE::NiPoint3 playerPosition = RE::PlayerCharacter::GetSingleton()->GetPosition();
+        logger::info("player class: {:X}", reinterpret_cast<uintptr_t>(RE::PlayerCharacter::GetSingleton());
+        RE::PlayerCharacter::GetSingleton()->Get3D()->world.translate;
 		g_DrawHandler->g_DrawMenu->SetCoordinates(playerPosition.x, playerPosition.y, playerPosition.z);
 	}
 	else if (isCoordinatesBoxVisible)
@@ -507,8 +508,7 @@ void DebugHandler::DrawNavmesh(RE::NiPoint3 a_origin, float a_range)
 			logger::debug("CELL: {:X} {}", cellID, a_cell->GetFormEditorID());
 			for (const auto& navmesh : a_cell->GetRuntimeData().navMeshes->navMeshes)
 			{
-				
-				debug(" navmesh {:X} address: {:X}", navmesh->formID, reinterpret_cast<uintptr_t>(navmesh.get()));
+				logger::debug(" navmesh {:X} address: {:X}", navmesh->formID, reinterpret_cast<uintptr_t>(navmesh.get()));
 			}
 		}//*/
 
@@ -837,19 +837,10 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 						float yBound = *reinterpret_cast<float *>(primitiveAddr + 0x10);
 						float zBound = *reinterpret_cast<float *>(primitiveAddr + 0x14);
 						
-						std::string infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound), false);
+						std::string infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound));
 
-						RE::NiAVObject* AV = a_ref->Get3D();
+						auto M = a_ref->Get3D()->world.rotate;
 
-						if (a_ref->IsDisabled() || !AV) continue;
-
-						RE::NiMatrix3 M = AV->world.rotate; 
-
-						uint32_t baseColor = MCM::settings::occlusionColor;
-
-						// infoStr = GetOcclusionInfo(a_cell, a_ref,  RE::NiPoint3(2*xBound, 2*yBound, 2*zBound), false);
-						// define matrix by: a_ref->GetAngleX(), a_ref->GetAngleY(), a_ref->GetAngleZ()
-						
 						RE::NiPoint3 center = a_ref->GetPosition();
 						RE::NiPoint3 upperLeft1  = M * RE::NiPoint3( +xBound, +yBound, +zBound ); 
 						RE::NiPoint3 upperRight1 = M * RE::NiPoint3( -xBound, +yBound, +zBound ); 
@@ -859,7 +850,7 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 						RE::NiPoint3 upperRight2 = M * RE::NiPoint3( -xBound, -yBound, +zBound );
 						RE::NiPoint3 lowerRight2 = M * RE::NiPoint3( -xBound, -yBound, -zBound );
 						RE::NiPoint3 lowerLeft2  = M * RE::NiPoint3( +xBound, -yBound, -zBound );
-						
+
 						std::vector<RE::NiPoint3>  frontPlane{ center+upperLeft1,  center+upperRight1, center+lowerRight1, center+lowerLeft1  };
 						std::vector<RE::NiPoint3>   backPlane{ center+upperLeft2,  center+upperRight2, center+lowerRight2, center+lowerLeft2  };
 						std::vector<RE::NiPoint3>   leftPlane{ center+upperLeft1,  center+lowerLeft1,  center+lowerLeft2,  center+upperLeft2  };
@@ -867,12 +858,12 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 						std::vector<RE::NiPoint3>    topPlane{ center+upperLeft1,  center+upperLeft2,  center+upperRight2, center+upperRight1 };
 						std::vector<RE::NiPoint3> bottomPlane{ center+lowerLeft1,  center+lowerLeft2,  center+lowerRight2, center+lowerRight1 };
 			
-						g_DrawHandler->DrawPolygon(frontPlane,  0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
-						g_DrawHandler->DrawPolygon(backPlane,   0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
-						g_DrawHandler->DrawPolygon(leftPlane,   0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
-						g_DrawHandler->DrawPolygon(rightPlane,  0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
-						g_DrawHandler->DrawPolygon(topPlane,    0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
-						g_DrawHandler->DrawPolygon(bottomPlane, 0, baseColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(frontPlane,  0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(backPlane,   0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(leftPlane,   0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(rightPlane,  0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(topPlane,    0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
+						g_DrawHandler->DrawPolygon(bottomPlane, 0, MCM::settings::occlusionColor, MCM::settings::occlusionAlpha, 0, infoStr);
 
 						// draw borders around the cube edges
 						for (int i = 0; i < 4; i++)
@@ -888,45 +879,7 @@ void DebugHandler::DrawOcclusion(RE::NiPoint3 a_origin, float a_range)
 			return RE::BSContainer::ForEachResult::kContinue;
 		});
 	});
-}
-
-void DebugHandler::DrawLightBulbs(RE::NiPoint3 a_origin, float a_range)
-{
-	return;
-	/*
-    ForEachCellInRange(a_origin, a_range, [&](const RE::TESObjectCELL* a_cell) 
-	{
-        a_cell->ForEachReferenceInRange(a_origin, a_range, [&](RE::TESObjectREFR* a_ref) 
-		{
-            for (const auto& data : a_ref->extraList) 
-			{
-                auto extra = &a_ref->extraList;
-
-				RE::ExtraLightData* lightBulb = extra->GetByType(RE::ExtraDataType::kLightData);
-
-                for (auto& data : a_ref->extraList) 
-				{
-                    if (data.GetType() == RE::ExtraDataType::kLightData) 
-					{
-						RE::ExtraLightData lightData = static_cast<RE::ExtraLightData>(&data);
-						RE::NiPoint3 position = a_ref->GetPosition();
-						std::vector<RE::NiPoint3> dummyPolygon{ position, position, position };
-
-						std::string infoStr = "LIGHT BULB INFO:";
-						infoStr += fmt::format("\nFOV: {}", data.);
-
-
-						// draw invisible dummy polygon to able to show info since info can only be shown by looking at polygon corners
-						g_DrawHandler->DrawPolygon(dummyPolygon, 0, 0x000000, 0, 0, infoStr);
-                        g_DrawHandler->DrawPoint(, 15, 0xFCC019, 50);
-                        logger::info("Lightbulb found at: {}, {}, {}", a_ref->GetPosition().x, a_ref->GetPosition().y, a_ref->GetPosition().z);
-                    }
-				}
-            }
-			return RE::BSContainer::ForEachResult::kContinue;
-        });
-    });
-	*/
+	
 }
 
 std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, const RE::TESObjectCELL* a_cell)
@@ -968,7 +921,7 @@ std::string DebugHandler::GetNavmeshInfo(RE::FormID a_formID, const RE::TESObjec
 	return infoStr;
 }
 
-std::string DebugHandler::GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, RE::NiPoint3 a_bounds, bool a_isDisabled)
+std::string DebugHandler::GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, RE::NiPoint3 a_bounds)
 {
 	RE::FormID formID = a_ref->GetFormID();
 
@@ -998,7 +951,6 @@ std::string DebugHandler::GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::
 	}
 
 	infoStr += "\n\nPLANEMARKER INFO";
-	if (a_isDisabled) infoStr += "\n\nPlanemarker currently disabled";
 	infoStr += fmt::format("\nForm ID: {:08X}", formID);
 	infoStr += fmt::format("\nPosition: {:.0f}, {:.0f}, {:.0f}", a_ref->GetPositionX(), a_ref->GetPositionY(), a_ref->GetPositionZ());
 	infoStr += fmt::format("\nBounds: {:.0f}, {:.0f}, {:.0f}", a_bounds.x, a_bounds.y, a_bounds.z);
@@ -1019,6 +971,7 @@ std::string DebugHandler::GetQuadInfo(const RE::TESObjectCELL* a_cell, uint8_t a
 	if (!a_cell || a_cell->GetFormID() >> 24 == 0xFF)
 	{
 		infoStr += "\nNot available";
+
 	}
 	else
 	{

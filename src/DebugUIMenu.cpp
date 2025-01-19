@@ -105,6 +105,8 @@ void DebugMenu::Register()
 		ui->Register(MENU_NAME, Creator);
 		logger::info("Registered menu '{}'", MENU_NAME);
 	}
+
+
 }
 
 RE::UI_MESSAGE_RESULTS DebugMenu::ProcessMessage(RE::UIMessage& a_message)

@@ -1,5 +1,6 @@
 .idea
 .vs
+.editorconfig
 _gallery
 build
 cmake-build*

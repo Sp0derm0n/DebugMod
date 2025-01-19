@@ -19,7 +19,10 @@ RE::UI_MESSAGE_RESULTS DrawMenu::ProcessMessage(RE::UIMessage& a_message)
 		DrawHandler::GetSingleton()->isMenuOpen = true;
 
 	else if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) 
-		DrawHandler::GetSingleton()->isMenuOpen = false;
+	{
+        DebugHandler::GetSingleton()->isCoordinatesBoxVisible = false;
+        DrawHandler::GetSingleton()->isMenuOpen = false;
+    }
 
 	return RE::UI_MESSAGE_RESULTS::kHandled;
 }
@@ -116,9 +119,9 @@ void DrawMenu::SetCoordinates(float a_x, float a_y, float a_z)
 	RE::GFxValue coordinatesBox;
 	GetBox(coordinatesBox, "coordinatesBox");
 
-	const std::string xString = fmt::format("x: {:>10.0f}", a_x);
-	const std::string yString = fmt::format("y: {:>10.0f}", a_y);
-	const std::string zString = fmt::format("z: {:>10.0f}", a_z);
+	const std::string xString = fmt::format("x: {:>7.0f}", a_x);
+	const std::string yString = fmt::format("y: {:>7.0f}", a_y);
+	const std::string zString = fmt::format("z: {:>7.0f}", a_z);
 
 	RE::GFxValue argsText[3]; argsText[0] = xString; argsText[1] = yString; argsText[2] = zString;
 	auto res = coordinatesBox.Invoke("SetCoordinates", nullptr, argsText, 3);

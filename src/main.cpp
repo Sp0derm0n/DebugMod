@@ -31,8 +31,9 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
 			{
 				logger::info("Plugin currently disabled in MCM");
 			}
+			break;
         }
-		break;
+		
 
     }
 }
@@ -60,7 +61,6 @@ extern "C" __declspec( dllexport ) constinit auto SKSEPlugin_Version = []() {
 
 	return v;
 }();
-
 
 extern "C" __declspec( dllexport ) bool SKSEPlugin_Query(const SKSE::QueryInterface*, SKSE::PluginInfo* pluginInfo)
 {

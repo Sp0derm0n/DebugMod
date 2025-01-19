@@ -78,10 +78,11 @@ class DebugHandler
 		void DrawNavmeshEdgeLink(const RE::NiPoint3& a_point1, const RE::NiPoint3& a_point2, uint32_t a_color, uint32_t a_alpha, EdgeLinkPosition a_position);
 		void DrawNavmeshCover(const RE::NiPoint3& a_rightPoint, const RE::NiPoint3& a_leftPoint, int32_t a_height, bool a_left, bool a_right);
 		void DrawOcclusion(RE::NiPoint3 a_origin, float a_range);
+        void DrawLightBulbs(RE::NiPoint3 a_origin, float a_range);
 
 
 		std::string GetNavmeshInfo(RE::FormID a_formID, const RE::TESObjectCELL* a_cell);
-		std::string GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, RE::NiPoint3 a_bounds);
+		std::string GetOcclusionInfo(const RE::TESObjectCELL* a_cell, RE::TESObjectREFR* a_ref, RE::NiPoint3 a_bounds, bool a_isDisabled);
 		std::string GetQuadInfo(const RE::TESObjectCELL* a_cell, uint8_t a_quad);
 
 		
