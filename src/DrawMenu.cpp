@@ -9,7 +9,7 @@ void DrawMenu::Register()
 	if (ui) 
 	{
 		ui->Register(MENU_NAME, Creator);
-		logger::info("Registered menu '{}'", MENU_NAME);
+		logger::debug("Registered menu '{}'", MENU_NAME);
 	}
 }
 
@@ -54,11 +54,11 @@ void DrawMenu::GetBox(RE::GFxValue& a_box, const char* a_boxName)
 	{
 		movie->GetVariable(&root, "_root");
 	}
-	else logger::info("Movie not obtained");
+	else logger::debug("Movie not obtained");
 
 	if (!root.IsObject())
 	{
-		logger::info("Root not obtained");
+		logger::debug("Root not obtained");
 		return;
 	}
 
@@ -132,7 +132,7 @@ void DrawMenu::DrawPoint(RE::NiPoint2 a_position, float a_radius, uint32_t a_col
 {
 	if (!movie) 
 	{
-		logger::info("Movie not obtained");
+		logger::debug("Movie not obtained");
 		return;
 	}
 

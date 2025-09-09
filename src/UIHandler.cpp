@@ -3,102 +3,112 @@
 #include "DebugHandler.h"
 #include "MCM.h"
 
-void UIHandler::Init()
+// called when menu is opened
+void UIHandler::Init() 
 {
-	
 	DebugMenu::OpenMenu();
+
+	keyScrollUp = false;
+	keyScrollDown = false;
+	mouseScrollUp = false;
+	mouseScrollDown = false;
 
 	auto uiTask = [&]() 
 	{
 		auto g_Debug = DebugHandler::GetSingleton();
-		if (!g_Debug->hasDebugMenuBeenOpenedBefore)
+
+		bool firstOpen = !g_Debug->hasDebugMenuBeenOpenedBefore;
+
+		if (firstOpen)
 		{
-			MCM::DebugMenuMCM::ReadSettings(true);			
+			MCM::DebugMenuMCM::ReadSettings(true);		
 			g_Debug->hasDebugMenuBeenOpenedBefore = true; // never sat to false again
 		}
 
 		GetDebugMenu();
 		canvasWidth = g_DebugMenu->movie->GetVisibleFrameRect().right;
 		canvasHeight = g_DebugMenu->movie->GetVisibleFrameRect().bottom;
+		//maskMinX = g_DebugMenu->maskMinX;
+		//maskMaxX = g_DebugMenu->maskMaxX; 
+		//maskMinY = g_DebugMenu->maskMinY;  
+		//maskMaxY = g_DebugMenu->maskMaxY; 
+
 		g_Cursor = RE::MenuCursor::GetSingleton();
 		cursorWidthInPercentage = canvasWidth/g_Cursor->screenWidthX;
 		cursorHeightInPercentage = canvasHeight/g_Cursor->screenWidthY;
+
 		isMenuOpen = true;
 	
-		g_DebugMenu->ShowMenu();
+		//g_DebugMenu->ShowMenu();
 
 		menuItems = g_DebugMenu->GetMenuItems();
 
+
+		////////// TEXT ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+		g_DebugMenu->SetText("navMeshRangeText",	MCM::settings::navmeshRange);
+		g_DebugMenu->SetText("occlusionRangeText",	MCM::settings::occlusionRange);
+		g_DebugMenu->SetText("markersRangeText",	MCM::settings::markersRange);
+
+		////////// DAY NIGHT MODE /////////////////////////////////////////////////////////////////////////////////////////////
+
+		bool success = true;
+
+		const char* methodName;
 		switch (MCM::settings::dayNightIndex)
 		{
 			case 0:
 			{
-				g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kDayNight].name, "SetSunIcon");
+				methodName = "SetSunIcon";
 				break;
 			}
 			case 1:
 			{
-				g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kDayNight].name, "SetMoonIcon");
+				methodName = "SetMoonIcon";
 				break;
 			}
 			case 2:
 			{
-				g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kDayNight].name, "SetAutoIcon");
+				methodName = "SetAutoIcon";
 				break;
 			}
 		}
+		success *= g_DebugMenu->ButtonActionScriptMethod(menuItems->GetButtonByName("dayNightIcon"), methodName);
 
 		////////// CELL BORDERS /////////////////////////////////////////////////////////////////////////////////////////////
 
 		if (MCM::settings::showCellWalls)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellWalls].name, "ON");
-			menuItems.buttons[BUTTON::kCellWalls].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("wallsIcon");
 		}
 		if (MCM::settings::showCellQuads)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellQuads].name, "ON");
-			menuItems.buttons[BUTTON::kCellQuads].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("quadsIcon");
 		}
 		if (MCM::settings::showCellBorders)
-		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellBorder].name, "ON");
-			menuItems.buttons[BUTTON::kCellBorder].isActive = true;	
-		}
-		else
-		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellWalls].name, "OFF");
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellQuads].name, "OFF");
+		{	
+			success *= InitializeToggleButtonOnMenuOpen("cellBorderIcon");
 		}
 
 		////////// NAVMESH /////////////////////////////////////////////////////////////////////////////////////////////
 
 		if (MCM::settings::showNavmeshTriangles)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "ON");
-			menuItems.buttons[BUTTON::kNavMeshTriangles].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("trianglesIcon");
 		}
 		if (MCM::settings::showNavmeshCover)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "ON");
-			menuItems.buttons[BUTTON::kNavMeshCover].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("coverIcon");
 		}
 
 		if (MCM::settings::showNavmesh)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMesh].name, "ON");
-			menuItems.buttons[BUTTON::kNavMesh].isActive = true;
-		}
-		else
-		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "OFF");
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "OFF");
+			success *= InitializeToggleButtonOnMenuOpen("navMeshIcon");
 		}
 
 		if (MCM::settings::useRuntimeNavmesh)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshMode].name, "ON");
-			menuItems.buttons[BUTTON::kNavMeshMode].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("navMeshModeIcon");
 		}
 
 		////////// OCCLUSION /////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,20 +116,45 @@ void UIHandler::Init()
 
 		if (MCM::settings::showOcclusion)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kOcclusion].name, "ON");
-			menuItems.buttons[BUTTON::kOcclusion].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("occlusionIcon");
 		}
 
 		////////// COORDINATES /////////////////////////////////////////////////////////////////////////////////////////////
 
 		if (MCM::settings::showCoordinates)
 		{
-			g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCoordinates].name, "ON");
-			menuItems.buttons[BUTTON::kCoordinates].isActive = true;
+			success *= InitializeToggleButtonOnMenuOpen("coordinatesIcon");
 		}
 
+		////////// MARKERS /////////////////////////////////////////////////////////////////////////////////////////////
+
+		if (MCM::settings::showMarkers)
+		{
+			success *= InitializeToggleButtonOnMenuOpen("markersIcon");
+		}
+
+		if (firstOpen)
+		{
+			if (success) logger::debug("Correctly initalized all button states");
+			else logger::debug("Failed to initialize all button states");
+		}
+
+		for (auto& button : menuItems->buttons)
+		{
+			UpdateChildButtonsState(button);
+		}
+		
 	};
 	SKSE::GetTaskInterface()->AddUITask(uiTask);
+
+}
+bool UIHandler::InitializeToggleButtonOnMenuOpen(const char* a_buttonName)
+{
+	const auto& button = menuItems->GetButtonByName(a_buttonName);
+	if (!button) return false;
+
+	button->isActive = true;
+	return true; //g_DebugMenu->ButtonActionScriptMethod(button, "ON");
 }
 
 void UIHandler::Unload()
@@ -135,202 +170,340 @@ void UIHandler::Update()
 
 	float x = g_Cursor->cursorPosX*cursorWidthInPercentage;
 	float y = g_Cursor->cursorPosY*cursorHeightInPercentage;
-	for (auto& button : menuItems.buttons)
+
+	bool isMenuInteractable = true;
+
+	for (auto& menu : menuItems->menus)
 	{
-		if (button.type == BUTTON::kCellQuads || button.type == BUTTON::kCellWalls)
-			if(menuItems.buttons[BUTTON::kCellBorder].isActive == false) 
-				continue;
+		if (!menu->isActive) continue;
 
-		if (x > button.xMin && x < button.xMax && y > button.yMin && y < button.yMax)
+		bool isCursorInMenu = x > menu->xMin && x < menu->xMax && y > menu->yMin && y < menu->yMax;
+		bool isCursorInMask = x > menu->maskXMin && x < menu->maskXMax && y > menu->maskYMin && y < menu->maskYMax;
+
+		if (isCursorInMask && (mouseScrollUp || mouseScrollDown))
 		{
-			if (mousePressed)
-			{
-				if (button.state != BUTTON_STATE::kHIT)
-				{
-					g_DebugMenu->ButtonMethod(button.name, "HIT");
-					button.state = BUTTON_STATE::kHIT;
-				}
-			}
-			else if (mouseReleased)
-			{
-				if (button.isActive) 
-				{
-					g_DebugMenu->ButtonMethod(button.name, "OFF");
-					button.state = BUTTON_STATE::kOFF;
-					button.isActive = false;
-					ProcessButtonClick(button.type, button.isActive);
-				}
-				else
-				{
-					g_DebugMenu->ButtonMethod(button.name, "ON");
-					button.state = BUTTON_STATE::kON;
-					button.isActive = true;
-					ProcessButtonClick(button.type, button.isActive);
-				}
-			}
-			else if (!button.isActive && button.state != BUTTON_STATE::kHOVER)
-			{
-				g_DebugMenu->ButtonMethod(button.name, "HOVER");
-				button.state = BUTTON_STATE::kHOVER;
-			}
+			float scrollDistance_ = scrollDistance;
+			if (mouseScrollDown) scrollDistance_ *= -1.0f;
+				
+			g_DebugMenu->ScrollMenu(scrollDistance_, menu);
 		}
 
-		// This also sets buttons to the correct on/off state when the menu is opened as long as the active state of the buttons are set in Init()
-		else if (!mousePressed || button.state != BUTTON_STATE::kHIT)
+		if (keyScrollUp || keyScrollDown)
 		{
-			if (button.isActive && button.state != BUTTON_STATE::kON)
+			float scrollDistance_ = scrollDistance*10;
+			if (keyScrollDown) scrollDistance_ *= -1.0f;
+
+			g_DebugMenu->ScrollMenu(scrollDistance_, menu);
+		}
+
+
+		for (auto& button : menu->buttons)
+		{
+			if (button->IsChildButton())
 			{
-				g_DebugMenu->ButtonMethod(button.name, "ON");
-				button.state = BUTTON_STATE::kON;
+				if (!button->parent->isActive && !button->HasChildFlag(ChildFlags::kInteractable)) continue;
 			}
-			else if(!button.isActive && button.state != BUTTON_STATE::kOFF)
+
+			bool isCursorOverButton = x > button->xMin && x < button->xMax - 2 && y > button->yMin && y < button->yMax - 2; // - 2 on the max values since the cursor position has a resolution of 1.5 pixels)
+			bool isButtonInteractable = isCursorInMask || !button->isInMask; // buttons in the scrollable area should only be interactable when they are in the mask
+
+			if (isMenuInteractable && isCursorOverButton && isButtonInteractable)
 			{
-				g_DebugMenu->ButtonMethod(button.name, "OFF");
-				button.state = BUTTON_STATE::kOFF;
+				if (mousePressed)
+				{
+					if (button->state != BUTTON_STATE::kHIT)
+					{
+						g_DebugMenu->ButtonActionScriptMethod(button, "HIT");
+						button->state = BUTTON_STATE::kHIT;
+					}
+				}
+				else if (mouseReleased)
+				{
+					if (button->isActive)
+					{
+						// if button is child button and interactable, if its parent is disabled, treat the disable of this button as an enable
+						if (button->IsChildButton() && button->HasChildFlag(ChildFlags::kInteractable) && !button->parent->isActive) {}
+						else
+						{
+							g_DebugMenu->ButtonActionScriptMethod(button, "OFF");
+							button->state = BUTTON_STATE::kOFF;
+							button->isActive = false;
+						}
+						ProcessButtonClick(button);
+					}
+					else
+					{
+						g_DebugMenu->ButtonActionScriptMethod(button, "ON");
+						button->state = BUTTON_STATE::kON;
+						button->isActive = true;
+						ProcessButtonClick(button);
+					}
+				}
+				else if (!button->isActive && button->state != BUTTON_STATE::kHOVER)
+				{
+					g_DebugMenu->ButtonActionScriptMethod(button, "HOVER");
+					button->state = BUTTON_STATE::kHOVER;
+				}
+			}
+
+			// This also sets buttons to the correct on/off state when the menu is opened as long as the active state of the buttons are set in Init()
+			else if (!mousePressed || button->state != BUTTON_STATE::kHIT)
+			{
+				if (button->isActive && button->state != BUTTON_STATE::kON)
+				{
+					g_DebugMenu->ButtonActionScriptMethod(button, "ON");
+					button->state = BUTTON_STATE::kON;
+				}
+				else if (!button->isActive && button->state != BUTTON_STATE::kOFF)
+				{
+					g_DebugMenu->ButtonActionScriptMethod(button, "OFF");
+					button->state = BUTTON_STATE::kOFF;
+				}
 			}
 		}
+		// some of the code needs only run when the cursor is in one of the menus - other must run every frame
+		if (isCursorInMenu && isMenuInteractable) 
+			isMenuInteractable = false;
+
 	}
-	if (mouseReleased) mouseReleased = false;
+	// set scroll up and down to false such that a scroll is not buffered, since the variables are sat to true whenever the scroll wheel is used
+	keyScrollUp = false;
+	keyScrollDown = false;
+	mouseScrollUp = false;
+	mouseScrollDown = false;
+	if (mouseReleased) mouseReleased = false; // makes it so mouseReleased is only true during 1 frame
 }
 
-void UIHandler::ProcessButtonClick(BUTTON a_button, bool a_isActive)
+void UIHandler::UpdateChildButtonsState(std::shared_ptr<Button>& a_parentButton)
 {
-	auto g_DebugHandler = DebugHandler::GetSingleton();
-	g_DebugHandler->timeSinceLastUpdate = 2; // the slowest update is once per second
-
-	switch (a_button)
+	// if the button's children does not have the interactable tag, set them to off when disabling parent button, and on if they are supposed to be on when parent is on
+	for (const auto& child : a_parentButton->children)
 	{
-		case BUTTON::kDayNight :
-		{ 
-			if (MCM::settings::dayNightIndex < 2) MCM::settings::dayNightIndex++;
-			else MCM::settings::dayNightIndex = 0;		
-
-			g_DebugMenu->ButtonMethod(menuItems.buttons[a_button].name, "CycleIcon");
-			break;
-		}
-
-		case BUTTON::kCellBorder : 
+		if (!child->HasChildFlag(ChildFlags::kInteractable))
 		{
-			MCM::settings::showCellBorders = a_isActive;
-
-			if (!a_isActive)
+			if (a_parentButton->isActive && child->isActive)
 			{
-				// show cellWalls and cellQuad buttons as off (no need to change the isActive status, as they won't be shown anyway when cellborders are not active
-				g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellWalls].name, "OFF");
-				g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellQuads].name, "OFF");
+				g_DebugMenu->ButtonActionScriptMethod(child.get(), "ON");
 			}
 			else
 			{
-				if (MCM::settings::showCellWalls) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellWalls].name, "ON");
-				if (MCM::settings::showCellQuads) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kCellQuads].name, "ON");
+				g_DebugMenu->ButtonActionScriptMethod(child.get(), "OFF");
 			}
-			break;
-		}
-		case BUTTON::kCellWalls :
-		{
-			MCM::settings::showCellWalls = a_isActive;
-			break;
-		}
-		case BUTTON::kCellQuads :
-		{
-			MCM::settings::showCellQuads = a_isActive;
-			break;
-		}
-		case BUTTON::kNavMesh : 
-		{
-			MCM::settings::showNavmesh = a_isActive;
-
-			if (!a_isActive)
-			{
-				// show cellWalls and cellQuad buttons as off (no need to change the isActive status, as they won't be shown anyway when cellborders are not active
-				if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "OFF");
-				if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "OFF");
-			}
-			else
-			{
-				if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshTriangles].name, "ON");
-				if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonMethod(menuItems.buttons[BUTTON::kNavMeshCover].name, "ON");
-			}
-			break;
-		}
-		case BUTTON::kNavMeshPlus : 
-		{
-			float currentRange = MCM::settings::navmeshRange;
-			float maxRange = MCM::settings::maxRange;
-			float step = MCM::settings::rangeStep;
-			float newRange = std::min(currentRange + step, maxRange);
-
-			MCM::settings::navmeshRange = newRange;
-			g_DebugMenu->SetText("navMeshRangeText", newRange);
-
-			break;
-		}
-		case BUTTON::kNavMeshMinus : 
-		{
-			float currentRange = MCM::settings::navmeshRange;
-			float minRange = MCM::settings::minRange;
-			float step = MCM::settings::rangeStep;
-			float newRange = std::max(currentRange - step, minRange);
-
-			MCM::settings::navmeshRange = newRange;
-			g_DebugMenu->SetText("navMeshRangeText", newRange);
-
-			break;
-		}
-		case BUTTON::kNavMeshMode :
-		{
-			MCM::settings::useRuntimeNavmesh = a_isActive;
-			break;
-		}
-		case BUTTON::kNavMeshTriangles :
-		{
-			MCM::settings::showNavmeshTriangles = a_isActive;
-			break;
-		}
-		case BUTTON::kNavMeshCover :
-		{
-			MCM::settings::showNavmeshCover = a_isActive;
-			break;
-		}
-		case BUTTON::kOcclusion :
-		{
-			MCM::settings::showOcclusion = a_isActive;
-			break;
-		}
-		case BUTTON::kOcclusionPlus :
-		{
-			float currentRange = MCM::settings::occlusionRange;
-			float maxRange = MCM::settings::maxRange;
-			float step = MCM::settings::rangeStep;
-			float newRange = std::min(currentRange + step, maxRange);
-
-			MCM::settings::occlusionRange = newRange;
-			g_DebugMenu->SetText("occlusionRangeText", newRange);
-			break;
-		}
-		case BUTTON::kOcclusionMinus :
-		{
-			float currentRange = MCM::settings::occlusionRange;
-			float minRange = MCM::settings::minRange;
-			float step = MCM::settings::rangeStep;
-			float newRange = std::max(currentRange - step, minRange);
-
-			MCM::settings::occlusionRange = newRange;
-			g_DebugMenu->SetText("occlusionRangeText", newRange);
-
-			break;
-		}
-		case BUTTON::kCoordinates :
-		{
-			MCM::settings::showCoordinates = a_isActive;
-			break;
 		}
 	}
+}
+
+void UIHandler::UpdateParentButtonState(std::shared_ptr<Button>& a_childButton)
+{
+	if (!a_childButton->IsChildButton()) return;
+	if (!a_childButton->HasChildFlag(ChildFlags::kInteractable)) return;
+
+	if (a_childButton->isActive)
+	{
+		a_childButton->parent->isActive = true;
+		a_childButton->parent->ButtonAction();
+	}
+	else if (a_childButton->parent->isActive) // disable the parent if all its children are interactable, and disabled
+	{
+		bool areAllChildrenInteractable = true;
+		bool areAllChildrenInactive = true;
+		for (const auto& child : a_childButton->parent->children)
+		{
+			if (!child->HasChildFlag(ChildFlags::kInteractable))
+			{
+				areAllChildrenInteractable = false;
+			}
+
+			if (child->isActive)
+			{
+				areAllChildrenInactive = false;
+			}
+		}
+		if (areAllChildrenInteractable && areAllChildrenInactive)
+		{
+			a_childButton->parent->isActive = false;
+			a_childButton->parent->ButtonAction();
+		}
+	}
+	
+}
+
+
+void UIHandler::ProcessButtonClick(std::shared_ptr<Button>& a_button)
+{
+	if (mouseReleased) mouseReleased = false; // makes it so only one button can be pressed pr frame
+
+	auto g_DebugHandler = DebugHandler::GetSingleton();
+	g_DebugHandler->ResetUpdateTimer();
+
+	if (a_button->type == BUTTON_TYPE::kClick)
+	{
+		a_button->isActive = false; // makes hover allways work, as it only works when button->isActive = false
+	}
+
+	a_button->ButtonAction();
+
+	UpdateChildButtonsState(a_button);
+	UpdateParentButtonState(a_button);
+
+	return;
+
+	
+}
+
+void UIHandler::SetNewRange(float& a_range, bool a_increase)
+{
+	if (a_increase)
+	{
+		float maxRange = MCM::settings::maxRange;
+		float step = MCM::settings::rangeStep;
+		a_range = std::min(a_range + step, maxRange);
+	}
+	else
+	{
+		float minRange = MCM::settings::minRange;
+		float step = MCM::settings::rangeStep;
+		a_range = std::max(a_range - step, minRange);
+	}
+	
 }
 
 void UIHandler::GetDebugMenu()
 {
 	auto ui = RE::UI::GetSingleton();
-			g_DebugMenu = ui ? ui->GetMenu<DebugMenu>(DebugMenu::MENU_NAME) : nullptr;
+	g_DebugMenu = ui ? ui->GetMenu<DebugMenu>(DebugMenu::MENU_NAME) : nullptr;
 }
+
+
+
+
+//switch (a_button->button)
+//{
+//	case BUTTON::kDayNight :
+//	{ 
+//		if (MCM::settings::dayNightIndex < 2) MCM::settings::dayNightIndex++;
+//		else MCM::settings::dayNightIndex = 0;		
+//
+//		g_DebugMenu->ButtonActionScriptMethod(a_button->name, "CycleIcon");
+//		break;
+//	}
+//
+//	case BUTTON::kCellBorder : 
+//	{
+//		MCM::settings::showCellBorders = a_button->isActive;
+//
+//		if (!a_button->isActive)
+//		{
+//			// show cellWalls and cellQuad buttons as off (no need to change the isActive status, as they won't be shown anyway when cellborders are not active
+//			g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kCellWalls]->name, "OFF");
+//			g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kCellQuads]->name, "OFF");
+//		}
+//		else
+//		{
+//			if (MCM::settings::showCellWalls) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kCellWalls]->name, "ON");
+//			if (MCM::settings::showCellQuads) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kCellQuads]->name, "ON");
+//		}
+//		break;
+//	}
+//	case BUTTON::kCellWalls :
+//	{
+//		MCM::settings::showCellWalls = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kCellQuads :
+//	{
+//		MCM::settings::showCellQuads = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kNavMesh : 
+//	{
+//		MCM::settings::showNavmesh = a_button->isActive;
+//
+//		if (!a_button->isActive)
+//		{
+//			// show cellWalls and cellQuad buttons as off (no need to change the isActive status, as they won't be shown anyway when cellborders are not active
+//			if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kNavMeshTriangles]->name, "OFF");
+//			if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kNavMeshCover]->name, "OFF");
+//		}
+//		else
+//		{
+//			if (MCM::settings::showNavmeshTriangles) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kNavMeshTriangles]->name, "ON");
+//			if (MCM::settings::showNavmeshCover) g_DebugMenu->ButtonActionScriptMethod(menuItems->buttons[BUTTON::kNavMeshCover]->name, "ON");
+//		}
+//		break;
+//	}
+//	case BUTTON::kNavMeshPlus : 
+//	{
+//		SetNewRange(MCM::settings::navmeshRange, true);
+//		g_DebugMenu->SetText("navMeshRangeText", MCM::settings::navmeshRange);
+//
+//		break;
+//	}
+//	case BUTTON::kNavMeshMinus : 
+//	{
+//		SetNewRange(MCM::settings::navmeshRange, false);
+//		g_DebugMenu->SetText("navMeshRangeText", MCM::settings::navmeshRange);
+//
+//		break;
+//	}
+//	case BUTTON::kNavMeshMode :
+//	{
+//		MCM::settings::useRuntimeNavmesh = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kNavMeshTriangles :
+//	{
+//		MCM::settings::showNavmeshTriangles = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kNavMeshCover :
+//	{
+//		MCM::settings::showNavmeshCover = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kOcclusion :
+//	{
+//		MCM::settings::showOcclusion = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kOcclusionPlus :
+//	{
+//		SetNewRange(MCM::settings::occlusionRange, true);
+//		g_DebugMenu->SetText("occlusionRangeText", MCM::settings::occlusionRange);
+//		break;
+//	}
+//	case BUTTON::kOcclusionMinus :
+//	{
+//		SetNewRange(MCM::settings::occlusionRange, false);
+//		g_DebugMenu->SetText("occlusionRangeText", MCM::settings::occlusionRange);
+//
+//		break;
+//	}
+//	case BUTTON::kCoordinates :
+//	{
+//		MCM::settings::showCoordinates = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kMarkers :
+//	{
+//		MCM::settings::showMarkers = a_button->isActive;
+//		break;
+//	}
+//	case BUTTON::kMarkersPlus :
+//	{
+//		SetNewRange(MCM::settings::markersRange, true);
+//		g_DebugMenu->SetText("markersRangeText", MCM::settings::markersRange);
+//		break;
+//	}
+//	case BUTTON::kMarkersMinus :
+//	{
+//		SetNewRange(MCM::settings::markersRange, false);
+//		g_DebugMenu->SetText("markersRangeText", MCM::settings::markersRange);
+//		break;
+//	}
+//	case BUTTON::kSelectMarkers :
+//	{
+//		break;
+//	}
+//}
 

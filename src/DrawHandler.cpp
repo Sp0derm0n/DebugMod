@@ -9,7 +9,7 @@ void DrawHandler::Init() // called on ui thread
 	GetDrawMenu();
 	if (!g_DrawMenu)
 	{
-		logger::info("Failed to initialize camera handler");
+		logger::debug("Failed to initialize camera handler");
 		return;
 	}
 	g_DrawMenu->HideBox("infoBox");
@@ -26,7 +26,7 @@ void DrawHandler::Init() // called on ui thread
 	niCamera = GetNiCamera(RE::PlayerCamera::GetSingleton());
 	playerCamera = RE::PlayerCamera::GetSingleton();
 
-	if (!niCamera || !playerCamera) logger::info("Failed to initialize camera handler");
+	if (!niCamera || !playerCamera) logger::debug("Failed to initialize camera handler");
 	
 }
 
@@ -128,19 +128,13 @@ void DrawHandler::DrawLines()
 
 RE::TESForm* GetFormFromFile(RE::FormID a_formID, std::string_view a_filename)
 {
-	/*
-	using func_t = RE::TESForm*(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::FormID, std::string_view);
-	RE::VMStackID frame = 0;  
-
-	REL::Relocation<func_t> func{ RELOCATION_ID(55672, 55465) };
-	auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-	return func(vm, frame, a_formID, a_filename);
-	*/
-
 	using func_t = decltype(&GetFormFromFile);
 	REL::Relocation<func_t> func{ RELOCATION_ID(102238, 55465) };
 	return func(a_formID, a_filename);
 };
+
+
+
 
 void DrawHandler::DrawPolygons(float a_delta)
 {

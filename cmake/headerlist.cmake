@@ -8,6 +8,7 @@ set(headers ${headers}
 	src/MCM.h
 	src/PCH.h
 	src/UIHandler.h
+	src/Utils.h
 	src/hooks.h
 	src/logger.h
 )

@@ -10,15 +10,22 @@
 void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
     switch (a_message->type) 
 	{
-        case SKSE::MessagingInterface::kDataLoaded: 
+		case SKSE::MessagingInterface::kPostPostLoad:
 		{
 			MCM::Register();
 			MCM::InitNonMCMSettings();
-			MCM::DebugMenuMCM::ReadSettings(true);			
+			MCM::DebugMenuMCM::ReadSettings(true);
+			MCM::DebugMenuPresets::Init();
 
+			Hooks::Hook_SoundMarkersSetFormEditorID::install();
+
+			break;
+		}
+        case SKSE::MessagingInterface::kDataLoaded: 
+		{
 			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(EventSink::GetSingleton());
 			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESCellFullyLoadedEvent>(EventSink::GetSingleton());
-
+			
 			DrawMenu::Register();
 			DebugMenu::Register();
 			DebugHandler::GetSingleton()->Init();
@@ -27,9 +34,15 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
 			Hooks::Hook_CellLoad::install();
 			Hooks::Hook_NavMeshLoad::install();
 
+			MCM::settings::logUI = false;
+			MCM::settings::uiScale = 1.0f;
+
+			//bool* bShowMarkers = (bool*)RELOCATION_ID(508943, 381019).address();
+			//*bShowMarkers = true;
+
 			if (!MCM::settings::modActive)
 			{
-				logger::info("Plugin currently disabled in MCM");
+				logger::debug("Plugin currently disabled in MCM");
 			}
 			break;
         }
@@ -42,7 +55,9 @@ extern "C" __declspec( dllexport ) bool SKSEAPI SKSEPlugin_Load(const SKSE::Load
 {
     SKSE::Init(a_skse);
     SetupLog();
-	logger::info("plugin loaded");
+	logger::debug("plugin loaded");
+
+
 
     const auto messaging = SKSE::GetMessagingInterface();
     messaging->RegisterListener(MessageHandler);

@@ -6,6 +6,8 @@ build
 cmake-build*
 notes
 src/todo.txt
+src/*.TMP
 swf/*.swf
 swf/DebugMenu/*.swf
 swf/DrawMenu/*.swf
+
