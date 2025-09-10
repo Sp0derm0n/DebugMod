@@ -129,9 +129,9 @@ void DebugMenu::Init()
 
 	//										   name, layer
 	auto mainMenu				= RegisterMenu("mainMenu", 0);
-	auto markersSelectionMenu	= RegisterMenu("markersSelectionMenu", 0);
-	auto savePresetsMenu = RegisterMenu("SavePresetsMenu", 1);
-	auto loadPresetsMenu = RegisterMenu("LoadPresetsMenu", 1, mainMenu);
+	auto markersSelectionMenu	= RegisterMenu("markersSelectionMenu", 1);
+	auto savePresetsMenu = RegisterMenu("SavePresetsMenu", 2);
+	auto loadPresetsMenu = RegisterMenu("LoadPresetsMenu", 3, mainMenu);
 
 	HideMenu(markersSelectionMenu->GetName());
 	HideMenu(savePresetsMenu->GetName());
@@ -979,7 +979,9 @@ void DebugMenu::ScrollMenu(float a_distance, MenuPtr& a_menu)
 	root.GetMember(a_menu->GetName(), &menu);
 
 	RE::GFxValue maskItems;
-	menu.GetMember("maskItems", &maskItems); // only mask items are scrollable
+	auto hasMaskItems = menu.GetMember("maskItems", &maskItems); // only mask items are scrollable
+
+	if (!hasMaskItems) return;
 
 	RE::GFxValue::DisplayInfo itemsInfo;
 	maskItems.GetDisplayInfo(&itemsInfo);

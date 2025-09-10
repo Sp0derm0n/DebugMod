@@ -194,6 +194,10 @@ void UIHandler::Update()
 			if (keyScrollDown) scrollDistance_ *= -1.0f;
 
 			g_DebugMenu->ScrollMenu(scrollDistance_, menu);
+
+			// Only scroll the top most active menu
+			keyScrollDown = false;
+			keyScrollUp = false;
 		}
 
 

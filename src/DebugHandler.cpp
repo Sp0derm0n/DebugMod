@@ -1832,15 +1832,29 @@ std::string DebugHandler::GetQuadInfo(const RE::TESObjectCELL* a_cell, uint8_t a
 {
 	std::string infoStr = GetCellInfo(a_cell, nullptr);
 
-	infoStr += "\n\nQUAD INFO:";
-	infoStr += fmt::format("\nQuad nummber: {}", a_quad + 1);
+	auto& cellLand = a_cell->GetRuntimeData().cellLand;
+	
+	infoStr += "\n\nLANDSCAPE INFO:"s;
+	infoStr += fmt::format("\nForm ID {:08X}", cellLand->formID);
+	infoStr += "\nReferenced by:"s;
 
+	for (const auto& fileName : GetSouceFiles(cellLand))
+	{
+		infoStr += "\nMod: "s;
+		infoStr += std::string(fileName);
+	}
+	
+
+	infoStr += "\n\nQUAD INFO:"s;
+	infoStr += fmt::format("\nQuad nummber: {}", a_quad + 1);
+	
 	int i = 0;
-	for (const auto texture : a_cell->GetRuntimeData().cellLand->loadedData->quadTextures[a_quad])
+	for (const auto texture : cellLand->loadedData->quadTextures[a_quad])
 	{
 		i++;
 		if (texture)
 		{
+			if (i > 1) infoStr += "\n"s;
 			infoStr += fmt::format("\nTexture set {}", i);
 			auto textureSet = texture->textureSet;
 			if (textureSet)
