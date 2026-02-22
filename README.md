@@ -1,3 +1,3 @@
-Debug menu
+Debug menu, available at https://www.nexusmods.com/skyrimspecialedition/mods/136456
 
-Feel free to yoink any code
+Feel free to use any code.
