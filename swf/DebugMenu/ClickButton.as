@@ -7,10 +7,15 @@ class ClickButton extends MovieClip
 		this._yscale = 100;
     }
 	
-	function HOVER()
+	function HOVER_OFF()
     {
 		this._xscale = 90;
 		this._yscale = 90;
+    }
+	
+	function HOVER_ON()
+    {
+		HOVER_OFF();
     }
 	
 	function HIT()

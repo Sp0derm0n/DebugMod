@@ -4,22 +4,22 @@
 
 class UIHandler
 {
-	using BUTTON = DebugMenu::BUTTON;
-	using BUTTON_TYPE = DebugMenu::Button::BUTTON_TYPE;
-	using BUTTON_STATE = DebugMenu::Button::BUTTON_STATE;
-	using ChildFlags = DebugMenu::Button::ChildFlags;
-	using MenuItems = DebugMenu::MenuItems;
-	using Button = DebugMenu::Button;
+	using BUTTON = DebugMenuUI::BUTTON;
+	using BUTTON_TYPE = DebugMenuUI::Button::BUTTON_TYPE;
+	using BUTTON_STATE = DebugMenuUI::Button::BUTTON_STATE;
+	using ChildFlags = DebugMenuUI::Button::ChildFlags;
+	using MenuItems = DebugMenuUI::MenuItems;
+	using Button = DebugMenuUI::Button;
 
 	public:
-		RE::GPtr<DebugMenu> g_DebugMenu;
+		RE::GPtr<DebugMenuUI> g_DebugMenu;
 		RE::MenuCursor* g_Cursor;
 
-		static UIHandler* GetSingleton()
+		/*static UIHandler* GetSingleton()
 		{
 			static UIHandler singleton;
 			return std::addressof(singleton);
-		}
+		}*/
 
 		MenuItems* menuItems;
 

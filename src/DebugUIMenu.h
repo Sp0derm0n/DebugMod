@@ -2,7 +2,7 @@
 
 #include "MCM.h"
 
-class DebugMenu : public RE::IMenu
+class DebugMenuUI : public RE::IMenu
 {
 	public:
 		constexpr static const char* MENU_PATH = "DebugMenu";
@@ -71,7 +71,6 @@ class DebugMenu : public RE::IMenu
 
 			float maskItemsDefaultY;
 			float maskItemsCurrentY;
-			float maskItemsYLocalOffset;
 			float maskItemsHeight;
 
             std::string name;
@@ -126,6 +125,7 @@ class DebugMenu : public RE::IMenu
 				BUTTON_STATE state = BUTTON_STATE::kOFF;
 
 				bool isActive = false;
+				bool isEnabled = true;
 				bool isInMask;
 
 				MenuPtr parentMenu;
@@ -225,9 +225,10 @@ class DebugMenu : public RE::IMenu
 		void		ScrollMenu(float a_distance, MenuPtr& a_menu);
 		void		SetNewRange(float& a_range, bool a_increase);
 		void		UpdateMarkersSelectionButtons();
+		void		DisableD3DWarnings();
 
-		bool		ButtonActionScriptMethod(const ButtonPtr& a_button, const char* a_methodName);
-		bool		ButtonActionScriptMethod(const Button* a_button, const char* a_methodName);
+		bool		ButtonActionScriptMethod(const ButtonPtr& a_button, const char* a_methodName, RE::GFxValue a_args = nullptr, uint32_t a_numArgs = 0);
+		bool		ButtonActionScriptMethod(const Button* a_button, const char* a_methodName, RE::GFxValue a_args = nullptr, uint32_t a_numArgs = 0);
         
 		MenuPtr		RegisterMenu(const char* a_menuName, uint32_t a_layer, MenuPtr a_parentMenu = nullptr );
 		ButtonPtr	RegisterButton(const char* a_buttonName, BUTTON_TYPE a_buttonType, MenuPtr a_parentMenu, ButtonActionFunction a_buttonAction);
@@ -237,6 +238,7 @@ class DebugMenu : public RE::IMenu
 
 
 		ButtonActionFunction DayNightAction;
+		ButtonActionFunction CloseMenuAction;
 		ButtonActionFunction CellBorderAction;
 		ButtonActionFunction CellWallsAction;
 		ButtonActionFunction CellQuadsAction;
@@ -264,11 +266,20 @@ class DebugMenu : public RE::IMenu
 		ButtonActionFunction SavePreset3MarkersAction;
 		ButtonActionFunction SavePresetAction;
 		ButtonActionFunction CancelSavePresetAction;
+		ButtonActionFunction CollisionAction;
+		ButtonActionFunction CollisionPlusAction;
+		ButtonActionFunction CollisionMinusAction;
+		ButtonActionFunction CollisionDisplayAction;
+		ButtonActionFunction ClearSelectedRefsAction;
+		ButtonActionFunction CollisionRenderAction;
+		ButtonActionFunction CollisionShowNPCsAction;
+
+
 
 
 		RE::GPtr<RE::GFxMovieView> movie;
 
-		DebugMenu();
+		DebugMenuUI();
 
 		static void Register();
 		static void OpenMenu();
@@ -276,7 +287,7 @@ class DebugMenu : public RE::IMenu
 
 		RE::UI_MESSAGE_RESULTS ProcessMessage(RE::UIMessage& a_message);
 		
-		static RE::stl::owner<RE::IMenu*> Creator() { return new DebugMenu(); }
+		static RE::stl::owner<RE::IMenu*> Creator() { return new DebugMenuUI(); }
 
 
 	private:

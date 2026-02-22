@@ -7,12 +7,13 @@
   "dependencies": [
     "fmt",
     "rapidcsv",
-    "rsm-binary-io",
     "simpleini",
     "spdlog",
     "tomlplusplus",
-    "xbyak",
     "directxtk",
-    "catch2"
+    "catch2",
+    "polyhook2",
+    "detours",
+    "glm"
   ]
 }

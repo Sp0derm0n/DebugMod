@@ -1,8 +1,5 @@
-﻿import flash.geom.ColorTransform;
-
-class ToggleButton extends MovieClip
+﻿class ToggleButton extends MovieClip
 {
-	//var originalColorTransform:ColorTransform;
 	
 	var onIcon:MovieClip;
 	var offIcon:MovieClip;
@@ -13,23 +10,25 @@ class ToggleButton extends MovieClip
 		super();
 		totalScale = 1;
 
-		//this.originalColorTransform = this.transform.colorTransform;
-		onIcon._visible = false;
-		offIcon._visible = true;
-		this._xscale = 100*totalScale;
-		this._yscale = 100*totalScale;
-		this._alpha  = 100;
-		//this.transform.colorTransform = new ColorTransform(0, 0, 0, 1, 0, 0, 0, 0);
+		OFF();
 	}
    
-	public function HOVER()
+	public function HOVER_ON()
+    {
+		onIcon._visible = true;
+		offIcon._visible = false;
+		this._xscale = 90*totalScale;
+		this._yscale = 90*totalScale;
+		this._alpha  = 100;
+    }
+	
+	public function HOVER_OFF()
     {
 		onIcon._visible = true;
 		offIcon._visible = false;
 		this._xscale = 100*totalScale;
 		this._yscale = 100*totalScale;
 		this._alpha  =  60;
-		//this.transform.colorTransform = this.originalColorTransform;
     }
    
 	public function HIT()
@@ -38,7 +37,7 @@ class ToggleButton extends MovieClip
 		offIcon._visible = false;
 		this._xscale = 80*totalScale;
 		this._yscale = 80*totalScale;
-		//this.transform.colorTransform = this.originalColorTransform;
+		this._alpha  = 100;
 	}
 	
 	public function ON()
@@ -48,7 +47,6 @@ class ToggleButton extends MovieClip
 		this._xscale = 100*totalScale;
 		this._yscale = 100*totalScale;
 		this._alpha  = 100;
-		//this.transform.colorTransform = this.originalColorTransform;
 	}
 	
     public function OFF()
@@ -58,7 +56,6 @@ class ToggleButton extends MovieClip
 		this._xscale = 100*totalScale;
 		this._yscale = 100*totalScale;
 		this._alpha  = 100;
-		//this.transform.colorTransform = new ColorTransform(0, 0, 0, 1, 0, 0, 0, 0);
 	}
 	
 	public function GetWidth():Number

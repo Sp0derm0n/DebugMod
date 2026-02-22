@@ -155,54 +155,6 @@ namespace Linalg
 
 		return transpose;
 	}
-	Matrix4 Matrix4::Inverse(const Matrix4& Q, const Matrix4& R) const
-	{
-		int size = 4;
-		Matrix4 inverse;
-		for (int i = 0; i < size; i++)
-		{
-			Vector4 unitVector;
-			for (int j = 0; j < size; j++) if(j == i) unitVector[j] = 1;
-
-			Vector4 vec = Matrix4::solve(unitVector, Q, R);
-			for (int k = 0; k < size; k++) inverse(k, i) = vec[k];
-		}
-		return inverse;
-	}
-	
-	void Matrix4::QRDecomposition(Matrix4& Q, Matrix4& R) const
-	{
-		int size = 4;
-		Q = *this;
-		for (int i = 0; i < size; i++)
-		{
-			R(i,i) = Q(i).Norm();
-			for (int j = 0; j < size; j++) Q(j, i) /= R(i,i);
-
-			for (int j = i + 1; j < size; j++)
-			{
-				R(i,j) = Q(i) * Q(j);
-				Vector4 subt = Q(i) * R(i,j);
-				for(int k = 0; k < size; k++) Q(k, j) -= subt[k];
-			}
-		}
-	}
-
-	Vector4 Matrix4::solve(const Vector4& a_vector, const Matrix4& Q, const Matrix4& R)
-	{
-		int size = 4;
-
-		Vector4 c = Q.T() * a_vector;
-		Vector4 x;
-
-		for (int i = size - 1; i >= 0; i--)
-		{
-			double sum = c[i];
-			for (int j = 1; j < size; j++) sum -= R(i,j)*x[j];
-			x[i] = sum/R(i,i);
-		}
-		return x;
-	}
 
 	void Matrix4::Print(const char* a_msg)
 	{
@@ -210,26 +162,39 @@ namespace Linalg
 	}
 
 
-	void PrintMatrix(const char* a_title, RE::NiMatrix3 a_matrix)
+	void PrintMatrix(const char* a_title, RE::NiMatrix3 a_matrix, int a_indent)
 	{
-		logger::info("{}", a_title);
-		logger::info("{:>6.2f} {:>6.2f} {:>6.2f}", a_matrix.entry[0][0], a_matrix.entry[0][1],a_matrix.entry[0][2]);
-		logger::info("{:>6.2f} {:>6.2f} {:>6.2f}", a_matrix.entry[1][0], a_matrix.entry[1][1],a_matrix.entry[1][2]);
-		logger::info("{:>6.2f} {:>6.2f} {:>6.2f}", a_matrix.entry[2][0], a_matrix.entry[2][1],a_matrix.entry[2][2]);
+		std::string indent(a_indent, ' ');
+
+		logger::debug("{}", a_title);
+		logger::debug("{}{:>12.8f} {:>12.8f} {:>12.8f}", indent, a_matrix.entry[0][0], a_matrix.entry[0][1],a_matrix.entry[0][2]);
+		logger::debug("{}{:>12.8f} {:>12.8f} {:>12.8f}", indent, a_matrix.entry[1][0], a_matrix.entry[1][1],a_matrix.entry[1][2]);
+		logger::debug("{}{:>12.8f} {:>12.8f} {:>12.8f}", indent, a_matrix.entry[2][0], a_matrix.entry[2][1],a_matrix.entry[2][2]);
 
 	}
 
-	void  PrintMatrix(const char* a_title, float a_Matrix4[4][4])
+	void PrintMatrix(const char* a_title, float a_Matrix4[4][4], int a_indent)
 	{
-		logger::info("{}", a_title);
-		logger::info("{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", a_Matrix4[0][0], a_Matrix4[0][1] ,a_Matrix4[0][2] ,a_Matrix4[0][3]);
-		logger::info("{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", a_Matrix4[1][0], a_Matrix4[1][1] ,a_Matrix4[1][2] ,a_Matrix4[1][3]);
-		logger::info("{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", a_Matrix4[2][0], a_Matrix4[2][1] ,a_Matrix4[2][2] ,a_Matrix4[2][3]);
-		logger::info("{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", a_Matrix4[3][0], a_Matrix4[3][1] ,a_Matrix4[3][2] ,a_Matrix4[3][3]);
+		std::string indent(a_indent, ' ');
+
+		logger::debug("{}", a_title);
+		logger::debug("{}{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", indent, a_Matrix4[0][0], a_Matrix4[0][1] ,a_Matrix4[0][2] ,a_Matrix4[0][3]);
+		logger::debug("{}{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", indent, a_Matrix4[1][0], a_Matrix4[1][1] ,a_Matrix4[1][2] ,a_Matrix4[1][3]);
+		logger::debug("{}{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", indent, a_Matrix4[2][0], a_Matrix4[2][1] ,a_Matrix4[2][2] ,a_Matrix4[2][3]);
+		logger::debug("{}{:>19.9f} {:>19.9f} {:>19.9f} {:>19.9f}", indent, a_Matrix4[3][0], a_Matrix4[3][1] ,a_Matrix4[3][2] ,a_Matrix4[3][3]);
 	}
 
-	void  PrintMatrix(const char* a_title, Matrix4 a_Matrix4)
+	void PrintMatrix(const char* a_title, glm::mat4 a_Matrix4, int a_indent)
 	{
-		PrintMatrix(a_title, a_Matrix4.entry);
+		float M[4][4];
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				M[i][j] = a_Matrix4[i][j];
+		PrintMatrix(a_title, M, a_indent);
+	}
+
+	void PrintMatrix(const char* a_title, Matrix4 a_Matrix4, int a_indent)
+	{
+		PrintMatrix(a_title, a_Matrix4.entry, a_indent);
 	}
 }

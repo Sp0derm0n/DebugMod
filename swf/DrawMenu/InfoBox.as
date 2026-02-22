@@ -33,7 +33,6 @@ class InfoBox extends MovieClip
 	
 	public function ScrollUp(a_scroll:Number)
 	{
-		infoText.SetScroll(a_scroll);
 		if (scrollUp._visible == true)
 		{
 			infoText.SetScroll(a_scroll);
@@ -48,6 +47,11 @@ class InfoBox extends MovieClip
 			infoText.SetScroll(a_scroll);
 			ShowArrows();
 		}
+	}
+	
+	public function GetCurrentScroll():Number
+	{
+		return infoText.GetScroll();
 	}
 	
 	public function GetMaxScroll():Number

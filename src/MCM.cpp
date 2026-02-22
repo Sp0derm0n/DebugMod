@@ -1,7 +1,7 @@
 #include "MCM.h"
 #include <SimpleIni.h>
 #include "DrawHandler.h"
-#include "DebugHandler.h"
+#include "DebugMenu/DebugMenu.h"
 #include "UIHandler.h"
 
 namespace MCM
@@ -9,18 +9,30 @@ namespace MCM
 	void DebugMenuMCM::OnConfigClose(RE::TESQuest*)
 	{
 		ReadSettings();
-		DrawHandler::GetSingleton()->UpdateCanvasScale();
-		DebugHandler::GetSingleton()->HideAllMarkers();
+		DebugMenu::GetDrawHandler()->UpdateCanvasScale();
+		DebugMenu::GetMarkerHandler()->HideAllMarkers();
+		DebugMenu::GetCollisionHandler()->HideAllCollisions();
+		UpdateCollisionColor();
 		if (!settings::modActive)
 		{
-			DebugHandler::GetSingleton()->CloseDrawMenu();
-			UIHandler::GetSingleton()->Unload();
+			DebugMenu::GetDebugMenuHandler()->CloseDrawMenu();
+			DebugMenu::GetUIHandler()->Unload();
 			MCM::settings::showCellBorders = false;
 			MCM::settings::showNavmesh = false;
 			MCM::settings::showOcclusion = false;
 			MCM::settings::showMarkers = false;
 		}
 	}
+
+	void DebugMenuMCM::UpdateCollisionColor()
+	{
+		float red = (MCM::settings::collisionColorInt >> 16) / 255.0f;
+		float green = ((MCM::settings::collisionColorInt >> 8) & 0xFF) / 255.0f;
+		float blue = ((MCM::settings::collisionColorInt & 0xFF)) / 255.0f;
+		float alpha = MCM::settings::collisionAlpha / 100.0f;
+		MCM::settings::collisionColor = vec4u(red, green, blue, alpha);
+	}
+
 
 	void DebugMenuMCM::ReadSettingsFromPath(std::filesystem::path a_path, bool a_firstRead)
 	{
@@ -38,28 +50,43 @@ namespace MCM
 		ReadBoolSetting(ini, "Main", "bShowInfoOnHover",	settings::showInfoOnHover);
 		ReadBoolSetting(ini, "Main", "bShowCrosshair",		settings::showCrosshair);
 		ReadBoolSetting(ini, "Main", "bShowCanvasBorder",	settings::showCanvasBorder);
+		ReadBoolSetting(ini, "Main", "bCollisionRate",		settings::updateCollisionsEveryFrame);
 		ReadBoolSetting(ini, "Main", "bShowCoverBeams",		settings::showCoverBeams);
 
 
 		if (a_firstRead) // only change these settings when the menu is opened for the first time
 		{
-			ReadUInt32Setting(ini, "Main", "uDayNightMode",		settings::dayNightIndex);
+			ReadUInt32Setting(ini, "Main", "uDayNightMode",			settings::dayNightIndex);
+			ReadUInt32Setting(ini, "Main", "uCollisionDisplayMode",	settings::collisionDisplayIndex);
 
 			ReadBoolSetting(ini, "Main", "bShowCellBorderOnMenuOpen",		settings::showCellBorders);
 			ReadBoolSetting(ini, "Main", "bShowCellBorderWallsOnMenuOpen",	settings::showCellWalls);
 			ReadBoolSetting(ini, "Main", "bShowCellQuadsOnMenuOpen",		settings::showCellQuads);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshOnMenuOpen",			settings::showNavmesh);
+			ReadBoolSetting(ini, "Main", "bShowRuntimeNavmeshOnMenuOpen",	settings::useRuntimeNavmesh);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshTrianglesOnMenuOpen",	settings::showNavmeshTriangles);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshCoverOnMenuOpen",		settings::showNavmeshCover);
 			ReadBoolSetting(ini, "Main", "bShowOcclusionOnMenuOpen",		settings::showOcclusion);
 			ReadBoolSetting(ini, "Main", "bShowCoordinatesOnMenuOpen",		settings::showCoordinates);
 			ReadBoolSetting(ini, "Main", "bShowMarkersOnMenuOpen",			settings::showMarkers);
+			ReadBoolSetting(ini, "Main", "bShowMarkersOnMenuOpen",			settings::showMarkers);
+			ReadBoolSetting(ini, "Main", "bShowCollisionsOnMenuOpen",		settings::showCollision);
+			ReadBoolSetting(ini, "Main", "bCollisionOcclude",				settings::collisionOcclude);
+			ReadBoolSetting(ini, "Main", "bShowCharController",				settings::showCharController);
+			ReadBoolSetting(ini, "Main", "bUseDirectX",						settings::useD3DMCMSetting);
+
 
 			ReadFloatSetting(ini, "Main", "fNavmeshRange",			settings::navmeshRange);
 			ReadFloatSetting(ini, "Main", "fOcclusionRange",		settings::occlusionRange);
 			ReadFloatSetting(ini, "Main", "fMarkersRange",			settings::markersRange);
+			ReadFloatSetting(ini, "Main", "fCollisionRange",		settings::collisionRange);
 		}
+
+		ReadBoolSetting(ini, "Main", "bCleanCollisions", settings::cleanCollisions);
 		
+
+		ReadUInt32Setting(ini, "Main", "uMaxCollisions", settings::maxCollisions);
+
 		ReadFloatSetting(ini, "Main", "fInfoRange",				settings::infoRange);
 		ReadFloatSetting(ini, "Main", "fCanvasScale",			settings::canvasScale);
 		ReadFloatSetting(ini, "Main", "fCellBorderWallsHeight", settings::cellWallsHeight);
@@ -81,9 +108,11 @@ namespace MCM
 		ReadUInt32Setting(ini, "Colors", "uNavmeshMaxCoverColor",			settings::navmeshMaxCoverColor);
 		ReadUInt32Setting(ini, "Colors", "uNavmeshMaxCoverBorderColor",		settings::navmeshMaxCoverBorderColor);
 		ReadUInt32Setting(ini, "Colors", "uOcclusionColor",					settings::occlusionColor);
+		ReadUInt32Setting(ini, "Colors", "uDisabledOcclusionColor",			settings::disabledOcclusionColor);
 		ReadUInt32Setting(ini, "Colors", "uOcclusionBorderColor",			settings::occlusionBorderColor);
 		ReadUInt32Setting(ini, "Colors", "uLightBulbInfoColor",				settings::lightBulbInfoColor);
 		ReadUInt32Setting(ini, "Colors", "uSoundMarkerInfoColor",			settings::soundMarkerInfoColor);
+		ReadUInt32Setting(ini, "Colors", "uCollisionColor",					settings::collisionColorInt);
 		
 
 		// Alpha
@@ -100,6 +129,7 @@ namespace MCM
 		ReadUInt32Setting(ini, "Alpha", "uOcclusionAlpha",				settings::occlusionAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uOcclusionBorderAlpha",		settings::occlusionBorderAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uMarkerInfoAlpha",				settings::markerInfoAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCollisionAlpha",				settings::collisionAlpha);
 
 		ReadFloatSetting(ini, "Alpha", "fLightBulbAlpha",				settings::lightBulbAplha);
 
@@ -109,7 +139,9 @@ namespace MCM
 		ReadBoolSetting(ini, "Advanced", "bShowNavmeshCoverLines",		settings::showNavmeshCoverLines);
 		ReadBoolSetting(ini, "Advanced", "bShowMarkerInfo",				settings::showMarkerInfo);
 
-		ReadUInt32Setting(ini, "Advanced", "uLinesHeight",		settings::linesHeight);
+		ReadUInt32Setting(ini, "Advanced", "uLinesHeight",				settings::linesHeight);
+		ReadUInt32Setting(ini, "Advanced", "uCapsuleCylinderSegments",	settings::capsuleCylinderSegments);
+		ReadUInt32Setting(ini, "Advanced", "uCapsuleSphereSegments",	settings::capsuleSphereSegments);
 
 	}
 
@@ -117,6 +149,8 @@ namespace MCM
 	{
 		constexpr auto defaultSettingsPath = L"Data/MCM/Config/DebugMenu/settings.ini";
 		constexpr auto mcmPath = L"Data/MCM/Settings/DebugMenu.ini";
+
+
 
 		ReadSettingsFromPath(defaultSettingsPath, a_firstRead);
 		ReadSettingsFromPath(mcmPath, a_firstRead);
@@ -169,7 +203,6 @@ namespace MCM
 
 	void InitNonMCMSettings()
 	{
-		settings::useRuntimeNavmesh = false;
 		settings::minRange = 500.0f;
 		settings::maxRange = 15000.0f;
 	}
@@ -222,8 +255,14 @@ namespace MCM
 		ReadWriteSetting(ini, "Markers", "bLean",			a_save, MCM::settings::showLeanMarkers);
 		ReadWriteSetting(ini, "Markers", "bSleep",			a_save, MCM::settings::showSleepMarkers);
 
-		ReadWriteSetting(ini, "Markers", "bMisc",			a_save, MCM::settings::showMiscMarkers);
 		ReadWriteSetting(ini, "Markers", "bLight",			a_save, MCM::settings::showLightMarkers);
+		ReadWriteSetting(ini, "Markers", "bOmni",			a_save, MCM::settings::showOmniMarkers);
+		ReadWriteSetting(ini, "Markers", "bShadowOmni",		a_save, MCM::settings::showShadowOmniMarkers);
+		ReadWriteSetting(ini, "Markers", "bShadowSpot",		a_save, MCM::settings::showShadowSpotMarkers);
+		ReadWriteSetting(ini, "Markers", "bShadowHemi",		a_save, MCM::settings::showShadowHemiMarkers);
+
+
+		ReadWriteSetting(ini, "Markers", "bMisc",			a_save, MCM::settings::showMiscMarkers);
 		ReadWriteSetting(ini, "Markers", "bIdle",			a_save, MCM::settings::showIdleMarkers);
 		ReadWriteSetting(ini, "Markers", "bSound",			a_save, MCM::settings::showSoundMarkers);
 		ReadWriteSetting(ini, "Markers", "bDragon",			a_save, MCM::settings::showDragonMarkers);

@@ -1,6 +1,6 @@
 ﻿#include "DrawMenu.h"
 #include "Linalg.h"
-#include "DebugHandler.h"
+#include "DebugMenu/DebugMenu.h"
 #include "DrawHandler.h"
 
 void DrawMenu::Register()
@@ -15,13 +15,15 @@ void DrawMenu::Register()
 
 RE::UI_MESSAGE_RESULTS DrawMenu::ProcessMessage(RE::UIMessage& a_message)
 {
-	if (a_message.type == RE::UI_MESSAGE_TYPE::kShow) 
-		DrawHandler::GetSingleton()->isMenuOpen = true;
+	if (a_message.type == RE::UI_MESSAGE_TYPE::kShow)
+	{
+		DebugMenu::GetDrawHandler()->isMenuOpen = true;
+	}
 
 	else if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) 
 	{
-        DebugHandler::GetSingleton()->isCoordinatesBoxVisible = false;
-        DrawHandler::GetSingleton()->isMenuOpen = false;
+        DebugMenu::GetDebugMenuHandler()->isCoordinatesBoxVisible = false;
+        DebugMenu::GetDrawHandler()->isMenuOpen = false;
     }
 
 	return RE::UI_MESSAGE_RESULTS::kHandled;
@@ -95,7 +97,7 @@ void DrawMenu::SetScroll(int32_t& a_scroll, bool a_scrollUp)
 	RE::GFxValue argsScroll{ a_scroll };
 	if (a_scrollUp) res = infoBox.Invoke("ScrollUp", nullptr, &argsScroll, 1);
 	else res = infoBox.Invoke("ScrollDown", nullptr, &argsScroll, 1);
-	
+
 	//logger::info("Trying to set scroll to: {}, res: {}", a_scroll, res);
 }
 
@@ -110,7 +112,7 @@ void DrawMenu::SetInfoText(const std::string& a_text)
 	RE::GFxValue _lastTextLine;
 	infoBox.Invoke("GetLastLine", &_lastTextLine, nullptr, 0);
 
-	SetScroll(DrawHandler::GetSingleton()->infoBoxScroll, false);
+	SetScroll(DebugMenu::GetDrawHandler()->infoBoxScroll, false);
 	ShowBox("infoBox");
 }
 

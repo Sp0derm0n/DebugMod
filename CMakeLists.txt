@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 set(NAME "DebugMenu")
-set(VERSION 1.2.1)
+set(VERSION 1.3.0)
 
 # ------- Define project ----------
 
@@ -82,6 +82,18 @@ target_precompile_headers(
 	PRIVATE 
 	src/PCH.h
 )
+
+find_package(polyhook_2 CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE PolyHook_2::PolyHook_2)
+
+find_path(DETOURS_INCLUDE_DIRS "detours/detours.h")
+find_library(DETOURS_LIBRARY detours REQUIRED)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${DETOURS_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${DETOURS_LIBRARY})
+
+find_package(glm CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 
 
 if(DEFINED OUTPUT_FOLDER)

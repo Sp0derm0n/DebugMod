@@ -1,8 +1,7 @@
 #pragma once
 
 class EventSink : 
-	public RE::BSTEventSink<RE::InputEvent*>,
-	public RE::BSTEventSink<RE::TESCellFullyLoadedEvent>
+	public RE::BSTEventSink<RE::InputEvent*>
 {
     EventSink() = default;
     EventSink(const EventSink&) = delete;
@@ -33,7 +32,7 @@ class EventSink :
 
 
 		RE::BSEventNotifyControl ProcessEvent(RE::InputEvent* const* eventPtr, RE::BSTEventSource<RE::InputEvent*>*);
-		RE::BSEventNotifyControl ProcessEvent(const RE::TESCellFullyLoadedEvent* a_event, RE::BSTEventSource<RE::TESCellFullyLoadedEvent>*);
+
 
 
 	private:

@@ -17,6 +17,7 @@ namespace MCM
 			static void ReadFloatSetting(CSimpleIniA& a_ini, const char* a_sectionName, const char* a_varName, float& a_var);
 			static void ReadUInt32Setting(CSimpleIniA& a_ini, const char* a_sectionName, const char* a_varName, uint32_t& a_var);
 		
+			static void UpdateCollisionColor();
 	};
 
 	class DebugMenuPresets
@@ -59,23 +60,34 @@ namespace MCM
 		static inline uint32_t openMenuHotkey;
 		static inline uint32_t updateRate;
 		static inline uint32_t dayNightIndex;
+		static inline uint32_t collisionDisplayIndex;
 		static inline uint32_t scrollUpHotkey;
 		static inline uint32_t scrollDownHotkey;
+		static inline uint32_t maxCollisions;
 
 		static inline bool modActive;
 		static inline bool showInfoOnHover;
 		static inline bool showCrosshair;
 		static inline bool showCanvasBorder;
+		static inline bool updateCollisionsEveryFrame;
 		static inline bool showCellBorders;
 		static inline bool showCellWalls;
 		static inline bool showCellQuads;
 		static inline bool showNavmesh;
+		static inline bool useRuntimeNavmesh;
 		static inline bool showNavmeshTriangles;
 		static inline bool showNavmeshCover;
 		static inline bool showOcclusion;
 		static inline bool showCoordinates;
 		static inline bool showCoverBeams;
 		static inline bool showMarkers;
+		static inline bool showCollision;
+		static inline bool collisionOcclude;
+		static inline bool cleanCollisions;
+		static inline bool showCharController;
+		static inline bool useD3DMCMSetting; // Setting read from MCM
+		static inline bool useD3D; // setting which actually enableds funcitonality; This is sat in main after the first read of MCM settings, and will not be changed elsewhere; a restart is required to change it
+
 
 		static inline float infoRange;
 		static inline float canvasScale;
@@ -84,6 +96,7 @@ namespace MCM
 		static inline float navmeshRange;
 		static inline float occlusionRange;
 		static inline float markersRange;
+		static inline float collisionRange;
 
 		// Colors
 		static inline uint32_t cellBorderColor;
@@ -100,9 +113,11 @@ namespace MCM
 		static inline uint32_t navmeshMaxCoverColor;
 		static inline uint32_t navmeshMaxCoverBorderColor;
 		static inline uint32_t occlusionColor;
+		static inline uint32_t disabledOcclusionColor;
 		static inline uint32_t occlusionBorderColor;
 		static inline uint32_t lightBulbInfoColor;
 		static inline uint32_t soundMarkerInfoColor;
+		static inline uint32_t collisionColorInt;
 
 		// Alpha
 		static inline uint32_t cellBorderAlpha;
@@ -118,6 +133,7 @@ namespace MCM
 		static inline uint32_t occlusionAlpha;
 		static inline uint32_t occlusionBorderAlpha;
 		static inline uint32_t markerInfoAlpha;
+		static inline uint32_t collisionAlpha;
 
 		static inline float lightBulbAplha;
 
@@ -128,13 +144,16 @@ namespace MCM
 		static inline bool showMarkerInfo;
 		
 		static inline uint32_t linesHeight;
+		static inline uint32_t capsuleCylinderSegments;
+		static inline uint32_t capsuleSphereSegments;
 
 		// Non MCM settings
-		static inline bool useRuntimeNavmesh;
 		static inline float minRange;
 		static inline float maxRange;
 
 		static inline bool updateVisibleMarkers;
+
+		static inline vec4u collisionColor;
 
 		//static MarkerSetting showFurnitureMarkers;
 		//static MarkerSetting showSitMarkers;
@@ -150,8 +169,13 @@ namespace MCM
 		static inline bool showLeanMarkers;
 		static inline bool showSleepMarkers;
 
-		static inline bool showMiscMarkers;
 		static inline bool showLightMarkers;
+		static inline bool showOmniMarkers;
+		static inline bool showShadowOmniMarkers;
+		static inline bool showShadowSpotMarkers;
+		static inline bool showShadowHemiMarkers;
+
+		static inline bool showMiscMarkers;
 		static inline bool showIdleMarkers;
 		static inline bool showSoundMarkers;
 		static inline bool showDragonMarkers;
@@ -184,12 +208,18 @@ namespace MCM
 
 		static inline bool GetShowFurnitureMarkers()		{ return showFurnitureMarkers; }
 		static inline bool GetShowSitMarkers()				{ return showFurnitureMarkers && showSitMarkers; }
-		static inline bool GetShowLeanMarkers()			{ return showFurnitureMarkers && showLeanMarkers; }
+		static inline bool GetShowLeanMarkers()				{ return showFurnitureMarkers && showLeanMarkers; }
 		static inline bool GetShowSleepMarkers()			{ return showFurnitureMarkers && showSleepMarkers; }
 
-		static inline bool GetShowMiscMarkers()			{ return showMiscMarkers; }
-		static inline bool GetShowLightMarkers()			{ return showMiscMarkers && showLightMarkers; }
-		static inline bool GetShowIdleMarkers()			{ return showMiscMarkers && showIdleMarkers; }
+		static inline bool GetShowLightMarkers()			{ return showLightMarkers; }
+		static inline bool GetShowOmniMarkers()				{ return showLightMarkers && showOmniMarkers;}
+		static inline bool GetShowShadowOmniMarkers()		{ return showLightMarkers && showShadowOmniMarkers;}
+		static inline bool GetShowShadowSpotMarkers()		{ return showLightMarkers && showShadowSpotMarkers;}
+		static inline bool GetShowShadowHemiMarkers()		{ return showLightMarkers && showShadowHemiMarkers;}
+
+
+		static inline bool GetShowMiscMarkers()				{ return showMiscMarkers; }
+		static inline bool GetShowIdleMarkers()				{ return showMiscMarkers && showIdleMarkers; }
 		static inline bool GetShowSoundMarkers()			{ return showMiscMarkers && showSoundMarkers; }
 		static inline bool GetShowDragonMarkers()			{ return showMiscMarkers && showDragonMarkers; }
 		static inline bool GetShowCloudMarkers()			{ return showMiscMarkers && showCloudMarkers; }
@@ -199,19 +229,19 @@ namespace MCM
 		static inline bool GetShowTextureSetMarkers()		{ return showMiscMarkers && showTextureSetMarkers; }
 
 		static inline bool GetShowMovableStaticMarkers()	{ return showMovableStaticMarkers; }
-		static inline bool GetShowMistMarkers()			{ return showMovableStaticMarkers && showMistMarkers; }
+		static inline bool GetShowMistMarkers()				{ return showMovableStaticMarkers && showMistMarkers; }
 		static inline bool GetShowLightBeamMarkers()		{ return showMovableStaticMarkers && showLightBeamMarkers; }
 		static inline bool GetShowOtherMSTTMarkers()		{ return showMovableStaticMarkers && showOtherMSTTMarkers; }
 
 		static inline bool GetShowStaticMarkers()			{ return showStaticMarkers; }
 		static inline bool GetShowXMarkers()				{ return showStaticMarkers && showXMarkers; }
 		static inline bool GetShowHeadingMarkers()			{ return showStaticMarkers && showHeadingMarkers; }
-		static inline bool GetShowDoorTeleportMarkers()	{ return showStaticMarkers && showDoorTeleportMarkers; }
+		static inline bool GetShowDoorTeleportMarkers()		{ return showStaticMarkers && showDoorTeleportMarkers; }
 		static inline bool GetShowOtherStaticMarkers()		{ return showStaticMarkers && showOtherStaticMarkers; }
 
 		static inline bool GetShowActivatorMarkers()		{ return showActivatorMarkers; }
 		static inline bool GetShowImpactMarkers()			{ return showActivatorMarkers && showImpactMarkers; }
-		static inline bool GetShowOtherActivatorMarkers()  { return showActivatorMarkers && showOtherActivatorMarkers; }
+		static inline bool GetShowOtherActivatorMarkers()	{ return showActivatorMarkers && showOtherActivatorMarkers; }
 
 		static inline bool GetShowCWMarkers()				{ return showCWMarkers; }
 		static inline bool GetShowCWAttackerMarkers()		{ return showCWMarkers && showCWAttackerMarkers; }

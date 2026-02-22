@@ -2,7 +2,13 @@
 #include "Linalg.h"
 #include "MCM.h"
 #include "UIHandler.h"
+#include "Renderer/Renderer.h"
+#include "DebugMenu/DebugMenu.h"
 
+DrawHandler::DrawHandler()
+{
+	logger::debug("Initialized Drawhandler");
+}
 
 void DrawHandler::Init() // called on ui thread
 {
@@ -64,25 +70,39 @@ void DrawHandler::GetDrawMenu()
 	g_DrawMenu = ui ? ui->GetMenu<DrawMenu>(DrawMenu::MENU_NAME) : nullptr;
 }
 
-void DrawHandler::ClearAll()
+void DrawHandler::ClearScaleform()
 {
 	pointsToDraw.clear();
 	linesToDraw.clear();
 	polygonsToDraw.clear();
 }
+void DrawHandler::ClearD3D11()
+{
+	Renderer::ClearLines();
+	Renderer::ClearMeshes();
+}
+
+
+Linalg::Matrix4& DrawHandler::GetProjectionMatrix()
+{
+	return projectionMatrix;
+}
+
+void DrawHandler::UpdateProjectionMatrix()
+{
+	projectionMatrix = Linalg::Matrix4(niCamera->GetRuntimeData().worldToCam);
+}
 
 void DrawHandler::Update(float a_delta)
 {
-	projectionMatrix = Linalg::Matrix4(niCamera->GetRuntimeData().worldToCam);
-
+	UpdateProjectionMatrix();
 	g_DrawMenu->clearCanvas();
-
-
 	//auto begin = std::chrono::high_resolution_clock::now();
 
-	DrawPolygons(a_delta);
+	DrawPolygons();
 	DrawLines();
 	DrawPoints();
+	HandleInfo(a_delta);
 	if (MCM::settings::showCrosshair) DrawCrosshair();
 	if (MCM::settings::showCanvasBorder) DrawCanvasBorders();
 	
@@ -91,6 +111,64 @@ void DrawHandler::Update(float a_delta)
 	//auto dt = std::chrono::duration_cast<std::chrono::microseconds>(end-begin).count();
 	//logger::info("time elapesed = {} µs", dt);
 }
+
+bool DrawHandler::IsShapeEligibleForInfo(const ShapeData* a_shape, const RE::NiPoint2& a_pointInShape, float a_depth)
+{
+	if (!a_shape->metaData || a_shape->metaData->infoType == DrawHandler::ShapeMetaData::InfoType::kNoInfo) return false;
+	if (!MCM::settings::showInfoOnHover || DebugMenu::GetUIHandler()->isMenuOpen) return false;
+	if (a_depth > MCM::settings::infoRange) return false;
+
+	float centerX = canvasWidth / 2;
+	float centerY = canvasHeight / 2;
+	if (a_pointInShape.x < centerX - infoRadius || 
+		a_pointInShape.x > centerX + infoRadius || 
+		a_pointInShape.y < centerY - infoRadius ||
+		a_pointInShape.y > centerY + infoRadius) return false;
+
+	return true;
+}
+
+void DrawHandler::AddEligibleInfoPoint(float a_pointDepth, const RE::NiPoint2& a_screenPoint, MetaDataPtr& a_metaData)
+{
+	eligibleInfoPoints.push_back(ShowInfoData{ a_pointDepth, a_screenPoint, a_metaData});
+}
+
+void DrawHandler::HandleInfo(float a_delta)
+{
+	if (!eligibleInfoPoints.empty())
+	{
+		if (timeHovering > infoDelay)
+		{
+			ShowInfoData closestPoint = eligibleInfoPoints.front();
+			for (const auto& point : eligibleInfoPoints)
+			{
+				if (point.depth < closestPoint.depth)
+					closestPoint = point;
+			}
+
+			g_DrawMenu->DrawPoint(closestPoint.screenPoint, 15 * pointScaleMultiplier / closestPoint.depth, 0xFFFFFF, 100);
+
+			if (!isInfoBoxVisible || closestPoint != currentInfoData)
+			{
+				isInfoBoxVisible = true;
+				DebugMenu::InfoHandler infoHandler{ closestPoint.shapeMetaData };
+				g_DrawMenu->SetInfoText(infoHandler.GetInfo());
+				currentInfoData = closestPoint;
+			}
+		}
+		timeHovering += a_delta;
+	}
+	else if (isInfoBoxVisible)
+	{
+		g_DrawMenu->HideBox("infoBox");
+		isInfoBoxVisible = false;
+		timeHovering = 0.0f;
+	}
+
+	eligibleInfoPoints.clear();
+}
+
+
 
 void DrawHandler::DrawPoints()
 {
@@ -102,6 +180,11 @@ void DrawHandler::DrawPoints()
 		{
 			auto screenspaceData = PointToScreenspace(clipPoint);
 			g_DrawMenu->DrawPoint(screenspaceData.point, pointData->radius*screenspaceData.scale, pointData->color, pointData->alpha);
+			
+			float depth = clipPoint.w;
+			auto& screenPoint = screenspaceData.point;
+			if (IsShapeEligibleForInfo(pointData.get(), screenPoint, depth))
+				AddEligibleInfoPoint(depth, screenPoint, pointData->metaData);
 		}
 	}
 }
@@ -122,21 +205,23 @@ void DrawHandler::DrawLines()
 				g_DrawMenu->DrawSimpleLine(screenspaceData1.point, screenspaceData2.point, lineData->thickness*(screenspaceData1.scale + screenspaceData2.scale)/2, lineData->color, lineData->alpha);
 			else
 				g_DrawMenu->DrawLine(screenspaceData1.point, screenspaceData2.point, lineData->thickness*screenspaceData1.scale, lineData->thickness*screenspaceData2.scale, lineData->color, lineData->alpha);
+
+			
+				float depth = clipPoint1.w;
+				auto& screenPoint = screenspaceData1.point;
+				if (IsShapeEligibleForInfo(lineData.get(), screenPoint, depth))
+					AddEligibleInfoPoint(depth, screenPoint, lineData->metaData);
+
+				depth = clipPoint2.w;
+				screenPoint = screenspaceData2.point;
+				if (IsShapeEligibleForInfo(lineData.get(), screenPoint, depth))
+					AddEligibleInfoPoint(depth, screenPoint, lineData->metaData);
+			
 		}
 	}
 }
 
-RE::TESForm* GetFormFromFile(RE::FormID a_formID, std::string_view a_filename)
-{
-	using func_t = decltype(&GetFormFromFile);
-	REL::Relocation<func_t> func{ RELOCATION_ID(102238, 55465) };
-	return func(a_formID, a_filename);
-};
-
-
-
-
-void DrawHandler::DrawPolygons(float a_delta)
+void DrawHandler::DrawPolygons()
 {
 	for (const auto& polygonData : polygonsToDraw)
 	{
@@ -146,6 +231,7 @@ void DrawHandler::DrawPolygons(float a_delta)
 			clipPoints.push_back(worldToClipPoint(position));
 		}
 
+		// number of clip points is not guaranteed to be equal the number of world points
 		if (!ClipPolygon(clipPoints)) continue; // no clipping happens if the entire polygon is off screen
 
 		ScreenspacePolygon polygon = PolygonToScreenspace(clipPoints);
@@ -154,47 +240,55 @@ void DrawHandler::DrawPolygons(float a_delta)
 		g_DrawMenu->DrawPolygon(polygon.points, polygonData->borderThickness*polygon.avgScale, polygonData->color, polygonData->baseAlpha, polygonData->borderColor, polygonData->borderAlpha);
 
 
-
-
-
-		///////////// vvv - Show info - vvv /////////////////////////////////////////////////////
-		if (!MCM::settings::showInfoOnHover || isPolygonHighlighted || polygonData->info.empty() || UIHandler::GetSingleton()->isMenuOpen) continue; // only show info if it isnt already on for another polygon and the polygon has a formID attached to it and the debug menu is not open
-		
-		if (RE::PlayerCharacter::GetSingleton()->AsActorState()->IsSprinting()) continue;
-
 		for (int i = 0; i < polygon.points.size(); i++)
 		{
-			RE::NiPoint2& point = polygon.points[i];
-			float centerX = canvasWidth/2;
-			float centerY = canvasHeight/2;
-			if (point.x > centerX - infoRadius && point.x < centerX + infoRadius && point.y > centerY - infoRadius && point.y < centerY + infoRadius)
-			{
-				// highlightPolygon = the polygon we're looking at. size = 0 when not looking at any 
-				if (highlightPolygon.size() == 0) 
-				{
-					highlightPolygon = polygonData->positions;
-				}
-				else if (highlightPolygon != polygonData->positions) continue; // skip all other polygons when looking at a polygon
-
-
-				if(clipPoints[i].w > MCM::settings::infoRange) continue; // w defined as the distance to the point
-
-				isPolygonHighlighted = true; // sat to false each frame at the bottom, so set to true each frame here
-				
-				timeHovering += a_delta;
-				if (timeHovering < infoDelay) continue; // have this after 'isPolygonHighlighted = true' to only run once per frame (and not once per point in range)
-
-				g_DrawMenu->DrawPoint(point, 15*polygon.scales[i], 0xFFFFFF, 100); // draw the point each frame
-
-				if (isInfoBoxVisible) continue; // only fill out the infobox when it opens
-
-				isInfoBoxVisible = true;
-				g_DrawMenu->SetInfoText(polygonData->info);
-			}
+			float depth = clipPoints[i].w;
+			const auto& screenPoint = polygon.points[i];
+			if (IsShapeEligibleForInfo(polygonData.get(), screenPoint, depth))
+				AddEligibleInfoPoint(depth, screenPoint, polygonData->metaData);
 		}
+
+		///////////// vvv - Show info - vvv /////////////////////////////////////////////////////
+		//if (!MCM::settings::showInfoOnHover || 
+		//	isPolygonHighlighted || 
+		//	polygonData->info.empty() || 
+		//	DebugMenu::GetUIHandler()->isMenuOpen) continue; // only show info if it isnt already on for another polygon and the polygon has a formID attached to it and the debug menu is not open
+		//
+		//if (RE::PlayerCharacter::GetSingleton()->AsActorState()->IsSprinting()) continue;
+
+		//for (int i = 0; i < polygon.points.size(); i++)
+		//{
+		//	RE::NiPoint2& point = polygon.points[i];
+		//	float centerX = canvasWidth/2;
+		//	float centerY = canvasHeight/2;
+		//	if (point.x > centerX - infoRadius && point.x < centerX + infoRadius && point.y > centerY - infoRadius && point.y < centerY + infoRadius)
+		//	{
+		//		// highlightPolygon = the polygon we're looking at. size = 0 when not looking at any 
+		//		if (highlightPolygon.size() == 0) 
+		//		{
+		//			highlightPolygon = polygonData->positions;
+		//		}
+		//		else if (highlightPolygon != polygonData->positions) continue; // skip all other polygons when looking at a polygon
+
+
+		//		if(clipPoints[i].w > MCM::settings::infoRange) continue; // w defined as the distance to the point
+
+		//		isPolygonHighlighted = true; // sat to false each frame at the bottom, so set to true each frame here
+		//		
+		//		timeHovering += a_delta;
+		//		if (timeHovering < infoDelay) continue; // have this after 'isPolygonHighlighted = true' to only run once per frame (and not once per point in range)
+
+		//		g_DrawMenu->DrawPoint(point, 15*polygon.scales[i], 0xFFFFFF, 100); // draw the point each frame
+
+		//		if (isInfoBoxVisible) continue; // only fill out the infobox when it opens
+
+		//		isInfoBoxVisible = true;
+		//		g_DrawMenu->SetInfoText(polygonData->info);
+		//	}
+		//}
 	}
 
-	if (!isPolygonHighlighted)
+	/*if (!isPolygonHighlighted)
 	{
 		highlightPolygon.clear();
 		timeHovering = 0.0f;
@@ -205,7 +299,7 @@ void DrawHandler::DrawPolygons(float a_delta)
 			isInfoBoxVisible = false;
 		}
 	}
-	isPolygonHighlighted = false;
+	isPolygonHighlighted = false;*/
 }
 
 void DrawHandler::DrawCrosshair()
@@ -231,7 +325,7 @@ void DrawHandler::DrawCanvasBorders()
 DrawHandler::ScreenspacePoint DrawHandler::PointToScreenspace(const Linalg::Vector4& a_point)
 {
 	
-	float scale = 200/a_point.w; // 200 chosen arbitrarily
+	float scale = pointScaleMultiplier/a_point.w;
 	float x = a_point.x/a_point.w;
 	float y = a_point.y/a_point.w;
 	x = (x + 1)/2 * canvasWidth;
@@ -531,22 +625,22 @@ RE::NiPointer<RE::NiCamera> DrawHandler::GetNiCamera(RE::PlayerCamera* camera) {
 
 Linalg::Vector4 DrawHandler::worldToClipPoint(const RE::NiPoint3& a_position)
 {
-	return projectionMatrix*Linalg::Vector4(a_position);
+	return GetProjectionMatrix()*Linalg::Vector4(a_position);
 }
 
-void DrawHandler::DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color, uint32_t a_alpha)
+void DrawHandler::DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color, uint32_t a_alpha, MetaDataPtr a_metaData)
 {
-	pointsToDraw.push_back(std::make_unique<PointData>(a_position, a_scale, a_color, a_alpha*alphaMultiplier));
+	pointsToDraw.push_back(std::make_unique<PointData>(a_position, a_scale, a_color, a_alpha*alphaMultiplier, a_metaData));
 }
 
-void DrawHandler::DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine)
+void DrawHandler::DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine, MetaDataPtr a_metaData)
 {
-	linesToDraw.push_back(std::make_unique<LineData>(a_start, a_end, a_thickness, a_color, a_alpha*alphaMultiplier, a_isSimpleLine));
+	linesToDraw.push_back(std::make_unique<LineData>(a_start, a_end, a_thickness, a_color, a_alpha*alphaMultiplier, a_isSimpleLine, a_metaData));
 }
 
-void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, std::string a_info, uint32_t a_borderColor, bool a_useCustomBorderColor)
+void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, uint32_t a_borderColor, bool a_useCustomBorderColor, MetaDataPtr a_metaData)
 {
-	polygonsToDraw.push_back(std::make_unique<PolygonData>(a_positions, a_borderThickness, a_color, a_baseAlpha*alphaMultiplier, a_useCustomBorderColor ? a_borderColor : a_color, a_borderAlpha*alphaMultiplier, a_info));
+	polygonsToDraw.push_back(std::make_unique<PolygonData>(a_positions, a_borderThickness, a_color, a_baseAlpha*alphaMultiplier, a_useCustomBorderColor ? a_borderColor : a_color, a_borderAlpha*alphaMultiplier, a_metaData));
 }
 
 // not used
@@ -561,6 +655,7 @@ void DrawHandler::BuildProjectionMatrix()
 	float t = frustum.fTop;
 
 	RE::NiMatrix3 projectionMatrix3x3Component;
+	// See notes for definition
 	projectionMatrix3x3Component.entry[0][0] = 1 / r;
 	projectionMatrix3x3Component.entry[1][2] = 1 / t;
 	projectionMatrix3x3Component.entry[2][1] = (f + n) / (f - n);

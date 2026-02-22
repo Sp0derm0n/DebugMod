@@ -28,9 +28,19 @@ class InfoTextField extends MovieClip
 		infoTextField.scroll = a_scroll;
 	}
 	
+	public function GetScroll():Number
+	{
+		return infoTextField.scroll;
+	}
+	
 	public function GetMaxScroll():Number
 	{
 		return infoTextField.maxscroll;
+	}
+	
+	public function GetTextField():TextField
+	{
+		return infoTextField;
 	}
 	
 }

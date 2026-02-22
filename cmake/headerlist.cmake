@@ -1,14 +1,32 @@
 set(headers ${headers}
-	src/DebugHandler.h
+	src/DebugMenu/CellHandler.h
+	src/DebugMenu/CollisionHandler.h
+	src/DebugMenu/DebugItem.h
+	src/DebugMenu/DebugMenu.h
+	src/DebugMenu/InfoHandler.h
+	src/DebugMenu/MarkerHandler.h
+	src/DebugMenu/NavmeshHandler.h
+	src/DebugMenu/OcclusionHandler.h
+	src/DebugMenu/RefInspectorHandler.h
 	src/DebugUIMenu.h
 	src/DrawHandler.h
 	src/DrawMenu.h
 	src/EventSink.h
+	src/Hooks.h
 	src/Linalg.h
 	src/MCM.h
 	src/PCH.h
+	src/RE.h
+	src/Renderer/BasicDetour.h
+	src/Renderer/CBuffer.h
+	src/Renderer/D3DContext.h
+	src/Renderer/Drawer.h
+	src/Renderer/MeshDrawer.h
+	src/Renderer/Model.h
+	src/Renderer/Renderer.h
+	src/Renderer/Shaders.h
+	src/Renderer/VertexBuffer.h
 	src/UIHandler.h
 	src/Utils.h
-	src/hooks.h
 	src/logger.h
 )

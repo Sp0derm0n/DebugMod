@@ -1,17 +1,21 @@
 #include "DebugUIMenu.h"
+#include "DebugMenu/DebugMenu.h"
 #include "UIHandler.h"
 #include "MCM.h"
 
-DebugMenu::DebugMenu()
+DebugMenuUI::DebugMenuUI()
 {
 	auto menu = static_cast<RE::IMenu*>(this);
 	menu->depthPriority = 1; // must be higher than depth of draw menu
 	auto scaleformManager = RE::BSScaleformManager::GetSingleton();
 
-	const auto success = scaleformManager->LoadMovieEx(this, MENU_PATH, RE::GFxMovieView::ScaleModeType::kNoBorder, 0.0, [](RE::GFxMovieDef* a_def) -> void {
+
+	const auto success = scaleformManager->LoadMovieEx(this, MENU_PATH, RE::GFxMovieView::ScaleModeType::kNoBorder, 0.0, 
+													   [](RE::GFxMovieDef* a_def) -> void 
+	{
 		a_def->SetState(RE::GFxState::StateType::kLog,
 		RE::make_gptr<Logger>().get());
-		});
+	});
 	if (!success) logger::debug("LoadMovieEx unsuccessful");
 
 	menuFlags.set(
@@ -27,7 +31,7 @@ DebugMenu::DebugMenu()
 	Init();
 }
 
-DebugMenu::Button::Button(float a_xMin, float a_xMax, float a_yMin, float a_yMax, std::string a_name,
+DebugMenuUI::Button::Button(float a_xMin, float a_xMax, float a_yMin, float a_yMax, std::string a_name,
                                   BUTTON_TYPE a_buttonType, MenuPtr a_parentMenu, bool a_isInMask,
                                   ButtonActionFunction a_buttonAction) :
 	xMin(a_xMin),
@@ -41,15 +45,20 @@ DebugMenu::Button::Button(float a_xMin, float a_xMax, float a_yMin, float a_yMax
 	ButtonAction_(a_buttonAction)
 {}
 
-void DebugMenu::Button::AddChild(ButtonPtr& a_child)
+void DebugMenuUI::Button::AddChild(ButtonPtr& a_child)
 {
+	if (!a_child) 
+	{
+		logger::debug("ERROR: Child button does not exist!");
+		return;
+	}
 	if (MCM::settings::logUI) logger::debug("   Adding child: {} to parent: {}", a_child->name, this->name);
 
 	children.push_back(a_child);
 	a_child->parent = this;
 }
 
-void DebugMenu::Button::SetChildFlag(ChildFlags a_flag)
+void DebugMenuUI::Button::SetChildFlag(ChildFlags a_flag)
 {
 	if (HasChildFlag(a_flag)) return;
 
@@ -59,14 +68,14 @@ void DebugMenu::Button::SetChildFlag(ChildFlags a_flag)
 	childFlags = static_cast<ChildFlags>(value);
 }
 
-bool DebugMenu::Button::HasChildFlag(ChildFlags a_flag)
+bool DebugMenuUI::Button::HasChildFlag(ChildFlags a_flag)
 {
 	uint32_t value = static_cast<uint32_t>(childFlags);
 	uint32_t flag  = static_cast<uint32_t>(a_flag);
 	return value & flag;
 }
 
-void DebugMenu::Button::ButtonAction()
+void DebugMenuUI::Button::ButtonAction()
 {
 	if (ButtonAction_)
 	{
@@ -74,7 +83,7 @@ void DebugMenu::Button::ButtonAction()
 	}
 }
 
-DebugMenu::ButtonPtr DebugMenu::MenuItems::GetButtonByName(const std::string& a_name)
+DebugMenuUI::ButtonPtr DebugMenuUI::MenuItems::GetButtonByName(const std::string& a_name)
 {
 	for (auto& button : buttons)
 	{
@@ -87,7 +96,7 @@ DebugMenu::ButtonPtr DebugMenu::MenuItems::GetButtonByName(const std::string& a_
 	return nullptr;
 }
 
-DebugMenu::TextBoxPtr DebugMenu::MenuItems::GetTextBoxByName(const std::string& a_name)
+DebugMenuUI::TextBoxPtr DebugMenuUI::MenuItems::GetTextBoxByName(const std::string& a_name)
 {
 	for (auto& textBox : textBoxes)
 	{
@@ -100,7 +109,7 @@ DebugMenu::TextBoxPtr DebugMenu::MenuItems::GetTextBoxByName(const std::string& 
 	return nullptr;
 }
 
-DebugMenu::MenuPtr DebugMenu::MenuItems::GetMenuByName(const std::string& a_name)
+DebugMenuUI::MenuPtr DebugMenuUI::MenuItems::GetMenuByName(const std::string& a_name)
 {
 	for (auto& menu : menus)
 	{
@@ -117,7 +126,7 @@ DebugMenu::MenuPtr DebugMenu::MenuItems::GetMenuByName(const std::string& a_name
 // To add a new item, make sure to give it a script to register it to a class.
 // Remember to also give the symbol a linkage name.
 // Then, give the symbol an instance name when added to the MenuContainer symbol.
-void DebugMenu::Init()
+void DebugMenuUI::Init()
 {
 	if (logUI) logger::debug("Registering UI elements");
 
@@ -146,6 +155,7 @@ void DebugMenu::Init()
 	auto navMeshRangeText	= RegisterTextBox("navMeshRangeText",	mainMenu);
 	auto occlusionRangeText	= RegisterTextBox("occlusionRangeText", mainMenu);
 	auto markersRangeText	= RegisterTextBox("markersRangeText",	mainMenu);
+	auto collisionRangeText	= RegisterTextBox("collisionRangeText",	mainMenu);
 
 	if (logUI) logger::debug("Registered text boxes");
 	
@@ -156,6 +166,7 @@ void DebugMenu::Init()
 
 	// Frame buttons first
 	auto dayNightMode	= RegisterButton("dayNightIcon",		BUTTON_TYPE::kCyclic, mainMenu, DayNightAction);
+	auto closeMenu		= RegisterButton("closeMenuIcon",		BUTTON_TYPE::kClick,  mainMenu, CloseMenuAction);
 
 
 	// Then container buttons
@@ -169,7 +180,7 @@ void DebugMenu::Init()
 	auto navMesh		= RegisterButton("navMeshIcon",			BUTTON_TYPE::kToggle, mainMenu, NavMeshAction);
 	auto navMeshPlus	= RegisterButton("navMeshPlusIcon",		BUTTON_TYPE::kClick,  mainMenu, NavMeshPlusAction);
 	auto navMeshMinus	= RegisterButton("navMeshMinusIcon",	BUTTON_TYPE::kClick,  mainMenu, NavMeshMinusAction);
-	auto navMeshMode	= RegisterButton("navMeshModeIcon",		BUTTON_TYPE::kToggle, mainMenu, NavMeshModeAction);
+	auto navMeshMode	= RegisterButton("navMeshModeIcon",		BUTTON_TYPE::kCyclic, mainMenu, NavMeshModeAction);
 	auto triangles		= RegisterButton("trianglesIcon",		BUTTON_TYPE::kToggle, mainMenu, NavMeshTrianglesAction);
 	auto cover			= RegisterButton("coverIcon",			BUTTON_TYPE::kToggle, mainMenu, NavMeshCoverAction);
 	navMesh->AddChild(triangles);
@@ -179,6 +190,7 @@ void DebugMenu::Init()
 	auto occlusionPlus	= RegisterButton("occlusionPlusIcon",	BUTTON_TYPE::kClick,  mainMenu, OcclusionPlusAction);
 	auto occlusionMinus	= RegisterButton("occlusionMinusIcon",	BUTTON_TYPE::kClick,  mainMenu, OcclusionMinusAction);
 	auto coordinates	= RegisterButton("coordinatesIcon",		BUTTON_TYPE::kToggle, mainMenu, CoordinatesAction);
+	
 	auto markers		= RegisterButton("markersIcon",			BUTTON_TYPE::kToggle, mainMenu, MarkersAction);
 	auto markersPlus	= RegisterButton("markersPlusIcon",		BUTTON_TYPE::kClick,  mainMenu, MarkersPlusAction);
 	auto markersMinus	= RegisterButton("markersMinusIcon",	BUTTON_TYPE::kClick,  mainMenu, MarkersMinusAction);
@@ -187,6 +199,16 @@ void DebugMenu::Init()
 	auto loadPreset2	= RegisterButton("preset2Icon",			BUTTON_TYPE::kClick,  mainMenu, LoadPreset2MarkersAction);
 	auto loadPreset3	= RegisterButton("preset3Icon",			BUTTON_TYPE::kClick,  mainMenu, LoadPreset3MarkersAction);
 	
+	auto collision		= RegisterButton("collisionIcon",		BUTTON_TYPE::kToggle, mainMenu, CollisionAction);
+	auto collisionPlus	= RegisterButton("collisionPlusIcon",	BUTTON_TYPE::kClick,  mainMenu, CollisionPlusAction);
+	auto collisionMinus	= RegisterButton("collisionMinusIcon",	BUTTON_TYPE::kClick,  mainMenu, CollisionMinusAction);
+	auto collisionDisp	= RegisterButton("collisionDisplayIcon",BUTTON_TYPE::kCyclic, mainMenu, CollisionDisplayAction);
+	auto clearRefs		= RegisterButton("clearRefsIcon",		BUTTON_TYPE::kClick,  mainMenu, ClearSelectedRefsAction);
+	auto collisionRend	= RegisterButton("collisionRenderIcon",	BUTTON_TYPE::kToggle, mainMenu, CollisionRenderAction);
+	auto collisionNPCs	= RegisterButton("charControllerIcon",	BUTTON_TYPE::kToggle, mainMenu, CollisionShowNPCsAction);
+	collision->AddChild(collisionRend);
+	collision->AddChild(collisionNPCs);
+
 	// Load Presets Menu frame Items
 
 	auto loadMarkerYes	= RegisterButton("yesIcon",				BUTTON_TYPE::kClick,  loadPresetsMenu, LoadPresetAction);
@@ -213,11 +235,42 @@ void DebugMenu::Init()
 	InitSelectableMarkerButtons();
 	OrderMenuItems();
 
+	if (MCM::settings::useD3D)
+	{
+		DisableD3DWarnings();
+	}
+	else
+	{
+		collision->isEnabled = false;
+		collisionPlus->isEnabled = false;
+		collisionMinus->isEnabled = false;
+		collisionDisp->isEnabled = false;
+		collisionRend->isEnabled = false;
+		collisionNPCs->isEnabled = false;
+	}
+
+
 	if (logUI) logger::debug("...Finished UI Initialization");
 
 }
 
-void DebugMenu::OrderMenuItems()
+void DebugMenuUI::DisableD3DWarnings()
+{
+	RE::GFxValue root;
+	GetRoot(root);
+	RE::GFxValue menu;
+	bool res = root.GetMember("mainMenu", &menu);
+
+	RE::GFxValue maskItems;
+	res = menu.GetMember("maskItems", &maskItems);
+
+	RE::GFxValue D3DWarn1;
+	res = maskItems.GetMember("D3D11DisabledWarning1", &D3DWarn1);
+
+	res = D3DWarn1.Invoke("Hide", nullptr);
+}
+
+void DebugMenuUI::OrderMenuItems()
 {
 	if (logUI) logger::debug("Ordering menu items...");
 	auto compareMenus = [](const MenuPtr& a_menu1, const MenuPtr& a_menu2) { return a_menu1->layer > a_menu2->layer; };
@@ -235,7 +288,7 @@ void DebugMenu::OrderMenuItems()
 	}
 }
 
-void DebugMenu::InitSelectableMarkerButtons()
+void DebugMenuUI::InitSelectableMarkerButtons()
 {
 	if (logUI) logger::debug("Creating 'select markers' buttons...");
 
@@ -245,8 +298,14 @@ void DebugMenu::InitSelectableMarkerButtons()
 	AddMarkerLabel( "Lean",				false,	&MCM::settings::showLeanMarkers);
 	AddMarkerLabel( "Sleep",			false,	&MCM::settings::showSleepMarkers);
 
+	AddMarkerLabel("Light bulbs",		true,	&MCM::settings::showLightMarkers);
+	AddMarkerLabel(" Omni",				false,	&MCM::settings::showOmniMarkers);
+	AddMarkerLabel(" Shadow omni",		false,	&MCM::settings::showShadowOmniMarkers);
+	AddMarkerLabel(" Shadow spot",		false,	&MCM::settings::showShadowSpotMarkers);
+	AddMarkerLabel(" Shadow hemi",		false,	&MCM::settings::showShadowHemiMarkers);
+
+
 	AddMarkerLabel("Misc",				true,	&MCM::settings::showMiscMarkers);
-	AddMarkerLabel( "Light bulbs",		false,	&MCM::settings::showLightMarkers);
 	AddMarkerLabel( "Idle markers",		false,  &MCM::settings::showIdleMarkers);
 	AddMarkerLabel( "Sound markers",	false,	&MCM::settings::showSoundMarkers);
 	AddMarkerLabel( "Dragon markers",	false,	&MCM::settings::showDragonMarkers);
@@ -517,12 +576,12 @@ void DebugMenu::InitSelectableMarkerButtons()
 	if (logUI) logger::debug("...Finished creating 'select markers' buttons");
 }
 
-void DebugMenu::AddMarkerLabel(const std::string& a_labelName, bool a_isHeadline, bool* setting)
+void DebugMenuUI::AddMarkerLabel(const std::string& a_labelName, bool a_isHeadline, bool* setting)
 {
 	selectableMarkers.push_back(MarkerLabel(a_labelName, a_isHeadline, setting));
 }
 
-void DebugMenu::UpdateMarkersSelectionButtons()
+void DebugMenuUI::UpdateMarkersSelectionButtons()
 {
 	// Sets the button states to the correct value
 	// Sets the color of the non-headline buttons correctly. The headline buttons must be called after the non-headline buttons have their isActive status set, therefore reverse loop
@@ -539,7 +598,7 @@ void DebugMenu::UpdateMarkersSelectionButtons()
 // -If it has a mask, call it menuMask
 // all items in the mask should be in a symbol called maskitems
 // all other interactable items should be in frameItems
-DebugMenu::MenuPtr DebugMenu::RegisterMenu(const char* a_menuName, uint32_t a_layer, MenuPtr a_parentMenu)
+DebugMenuUI::MenuPtr DebugMenuUI::RegisterMenu(const char* a_menuName, uint32_t a_layer, MenuPtr a_parentMenu)
 {
 	if (logUI) logger::debug("   Registering menu: {}...", a_menuName);
 
@@ -581,7 +640,6 @@ DebugMenu::MenuPtr DebugMenu::RegisterMenu(const char* a_menuName, uint32_t a_la
 
 	float maskItemsDefaultY = 0.0f;
 	float maskItemsCurrentY = 0.0f;
-	float maskItemsYLocalOffset = 0.0f;
 	float maskItemsHeight = 0.0f;
 
 	RE::GFxValue mask;
@@ -629,10 +687,12 @@ DebugMenu::MenuPtr DebugMenu::RegisterMenu(const char* a_menuName, uint32_t a_la
 		maskItems.Invoke("GetHeight", &itemsHeight, nullptr, 0);
 		maskItemsHeight = static_cast<float>(itemsHeight.GetNumber());
 
+
 		maskItemsDefaultY = static_cast<float>(maskItemsInfo.GetY()); // local y value of menuItems
 		maskItemsCurrentY = maskItemsDefaultY;
 
-		maskItemsYLocalOffset = menuY - maskItemsHeight / 2;
+		if (logUI) logger::debug("    Mask items height: {}", maskItemsHeight);
+		if (logUI) logger::debug("    Mask items y: {}", maskItemsDefaultY);
 	}
 
 	if (logUI) logger::debug("   Menu has frame items? {}", menu.HasMember("frameItems"));
@@ -641,7 +701,7 @@ DebugMenu::MenuPtr DebugMenu::RegisterMenu(const char* a_menuName, uint32_t a_la
 	//logger::info("{} {} {} {} {} {} {} {}", menuX, menuY, hasMask, maskXMin, maskXMax, maskYMin, maskYMax, a_menuName);
 	if (logUI) logger::debug("  ...Registered menu: {}", a_menuName);
 
-	auto newMenu = std::make_shared<Menu>(a_layer, menuX, menuY, xMin, xMax, yMin, yMax, hasMask, maskXMin, maskXMax, maskYMin, maskYMax, maskHeight, maskItemsDefaultY, maskItemsCurrentY, maskItemsYLocalOffset, maskItemsHeight, a_menuName);
+	auto newMenu = std::make_shared<Menu>(a_layer, menuX, menuY, xMin, xMax, yMin, yMax, hasMask, maskXMin, maskXMax, maskYMin, maskYMax, maskHeight, maskItemsDefaultY, maskItemsCurrentY, maskItemsHeight, a_menuName);
 	menuItems.menus.push_back(newMenu);
 
 	if (a_parentMenu)
@@ -651,7 +711,7 @@ DebugMenu::MenuPtr DebugMenu::RegisterMenu(const char* a_menuName, uint32_t a_la
     return newMenu;
 }
 
-DebugMenu::ButtonPtr DebugMenu::RegisterButton(const char* a_buttonName, BUTTON_TYPE a_buttonType, MenuPtr a_parentMenu, ButtonActionFunction a_buttonAction)
+DebugMenuUI::ButtonPtr DebugMenuUI::RegisterButton(const char* a_buttonName, BUTTON_TYPE a_buttonType, MenuPtr a_parentMenu, ButtonActionFunction a_buttonAction)
 {
 	RE::GFxValue root;
 	GetRoot(root);
@@ -692,7 +752,7 @@ DebugMenu::ButtonPtr DebugMenu::RegisterButton(const char* a_buttonName, BUTTON_
 	
 	if (!doesItemExist)
 	{
-		if (MCM::settings::logUI) logger::debug("Item '{}' could not be found in menu '{}'; menu has maskItems? {}; menu has frameItems? {}", a_buttonName, a_parentMenu->name, hasMaskItems, hasFrameItems);
+		logger::debug("ERROR: Item '{}' could not be found in menu '{}'; menu has maskItems? {}; menu has frameItems? {}", a_buttonName, a_parentMenu->name, hasMaskItems, hasFrameItems);
 		return nullptr;
 	}
 
@@ -746,10 +806,21 @@ DebugMenu::ButtonPtr DebugMenu::RegisterButton(const char* a_buttonName, BUTTON_
 		a_parentMenu->buttons.push_back(newButton);
 	}
 
+	if (logUI)
+	{
+		if (a_buttonType == BUTTON_TYPE::kCyclic)
+		{
+			RE::GFxValue out{};
+			auto res = item.Invoke("GetAllIcons", &out, nullptr, 0);
+			auto str = out.GetString();
+		}
+	}
+	
+
 	return newButton;
 }
 
-DebugMenu::TextBoxPtr DebugMenu::RegisterTextBox(const char* a_textBoxName, MenuPtr a_parentMenu)
+DebugMenuUI::TextBoxPtr DebugMenuUI::RegisterTextBox(const char* a_textBoxName, MenuPtr a_parentMenu)
 {
 	RE::GFxValue root;
 	GetRoot(root);
@@ -778,7 +849,7 @@ DebugMenu::TextBoxPtr DebugMenu::RegisterTextBox(const char* a_textBoxName, Menu
 }
 
 
-void DebugMenu::Register()
+void DebugMenuUI::Register()
 {
 	auto ui = RE::UI::GetSingleton();
 	if (ui) 
@@ -788,23 +859,23 @@ void DebugMenu::Register()
 	}
 }
 
-RE::UI_MESSAGE_RESULTS DebugMenu::ProcessMessage(RE::UIMessage& a_message)
+RE::UI_MESSAGE_RESULTS DebugMenuUI::ProcessMessage(RE::UIMessage& a_message)
 {
 	if (a_message.type == RE::UI_MESSAGE_TYPE::kShow)
 	{
-		UIHandler::GetSingleton()->isMenuOpen = true;	
+		DebugMenu::GetUIHandler()->isMenuOpen = true;
 		if (auto controlMap = RE::ControlMap::GetSingleton())
 		{
-			controlMap->ToggleControls(RE::UserEvents::USER_EVENT_FLAG::kWheelZoom, false);
+			controlMap->ToggleControls(RE::UserEvents::USER_EVENT_FLAG::kWheelZoom, false, false);
 		}
 	}
 
 	else if (a_message.type == RE::UI_MESSAGE_TYPE::kHide)
 	{
-		UIHandler::GetSingleton()->isMenuOpen = false;	
+		DebugMenu::GetUIHandler()->isMenuOpen = false;
 		if (auto controlMap = RE::ControlMap::GetSingleton())
 		{
-			controlMap->ToggleControls(RE::UserEvents::USER_EVENT_FLAG::kWheelZoom, true);
+			controlMap->ToggleControls(RE::UserEvents::USER_EVENT_FLAG::kWheelZoom, true, false);
 			MCM::DebugMenuPresets::SaveMarkerSettings(0);
 		}
 	}
@@ -813,20 +884,20 @@ RE::UI_MESSAGE_RESULTS DebugMenu::ProcessMessage(RE::UIMessage& a_message)
 	return RE::UI_MESSAGE_RESULTS::kHandled;
 }
 
-void DebugMenu::OpenMenu()
+void DebugMenuUI::OpenMenu()
 {
 	if (auto UIMessageQueue = RE::UIMessageQueue::GetSingleton())
 		UIMessageQueue->AddMessage(MENU_NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
 }
 
-void DebugMenu::CloseMenu()
+void DebugMenuUI::CloseMenu()
 {
 	if (auto UIMessageQueue = RE::UIMessageQueue::GetSingleton())
 		UIMessageQueue->AddMessage(MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 		
 }
 
-void DebugMenu::ShowMenu(const char* a_menuName)
+void DebugMenuUI::ShowMenu(const char* a_menuName)
 {
 	if (logUI) logger::debug("show: {}", a_menuName);
 	RE::GFxValue root;
@@ -844,7 +915,7 @@ void DebugMenu::ShowMenu(const char* a_menuName)
 
 }
 
-void DebugMenu::HideMenu(const char* a_menuName)
+void DebugMenuUI::HideMenu(const char* a_menuName)
 {
 	if (logUI) logger::debug("hide: {}", a_menuName);
 	RE::GFxValue root;
@@ -861,12 +932,12 @@ void DebugMenu::HideMenu(const char* a_menuName)
 	if (menu_) menu_->isActive = false;
 }
 
-DebugMenu::MenuItems* DebugMenu::GetMenuItems()
+DebugMenuUI::MenuItems* DebugMenuUI::GetMenuItems()
 {
 	return &menuItems;
 }
 
-void DebugMenu::GetIcon_(const char* a_iconName, const char* a_parentMenuName, bool a_isInMask, RE::GFxValue& a_icon)
+void DebugMenuUI::GetIcon_(const char* a_iconName, const char* a_parentMenuName, bool a_isInMask, RE::GFxValue& a_icon)
 {
 	if (logUI) logger::debug("  Getting Icon: {}; Belonging to: {} (in mask: {})", a_iconName, a_parentMenuName, a_isInMask);
 
@@ -885,22 +956,22 @@ void DebugMenu::GetIcon_(const char* a_iconName, const char* a_parentMenuName, b
 	icons.GetMember(a_iconName, &a_icon);
 }
 
-void DebugMenu::GetIcon(const ButtonPtr& a_button, RE::GFxValue& a_icon)
+void DebugMenuUI::GetIcon(const ButtonPtr& a_button, RE::GFxValue& a_icon)
 {
 	GetIcon_(a_button->GetName(), a_button->parentMenu->GetName(), a_button->isInMask, a_icon);
 }
 
-void DebugMenu::GetIcon(const Button* a_button, RE::GFxValue& a_icon)
+void DebugMenuUI::GetIcon(const Button* a_button, RE::GFxValue& a_icon)
 {
 	GetIcon_(a_button->GetName(), a_button->parentMenu->GetName(), a_button->isInMask, a_icon);
 }
 
-void DebugMenu::GetIcon(const TextBoxPtr& a_textBox, RE::GFxValue& a_icon)
+void DebugMenuUI::GetIcon(const TextBoxPtr& a_textBox, RE::GFxValue& a_icon)
 {
 	GetIcon_(a_textBox->GetName(), a_textBox->parentMenu->GetName(), a_textBox->isInMask, a_icon);
 }
 
-void DebugMenu::GetMenu(const MenuPtr& a_menu, RE::GFxValue& a_menuOut)
+void DebugMenuUI::GetMenu(const MenuPtr& a_menu, RE::GFxValue& a_menuOut)
 {
 	RE::GFxValue root;
 	GetRoot(root);
@@ -908,7 +979,7 @@ void DebugMenu::GetMenu(const MenuPtr& a_menu, RE::GFxValue& a_menuOut)
 	root.GetMember(a_menu->GetName(), &a_menuOut);
 }
 
-void DebugMenu::SetText(const TextBoxPtr& a_textBox, const std::string& a_text)
+void DebugMenuUI::SetText(const TextBoxPtr& a_textBox, const std::string& a_text)
 {
 	RE::GFxValue textBox;
 	GetIcon(a_textBox, textBox);
@@ -919,7 +990,7 @@ void DebugMenu::SetText(const TextBoxPtr& a_textBox, const std::string& a_text)
 	if (logUI) logger::debug("Setting Text(\"{}\") in: {}", a_text, a_textBox->name);
 }
 
-void DebugMenu::SetText(const TextBoxPtr& a_textBox, float a_range)
+void DebugMenuUI::SetText(const TextBoxPtr& a_textBox, float a_range)
 {
 	// round range
 	uint32_t rangeInt = static_cast<int>(a_range);
@@ -928,18 +999,18 @@ void DebugMenu::SetText(const TextBoxPtr& a_textBox, float a_range)
 	SetText(a_textBox, text);
 }
 
-void DebugMenu::SetText(const char* a_textBoxName, const std::string& a_text)
+void DebugMenuUI::SetText(const char* a_textBoxName, const std::string& a_text)
 {
 	auto textBox = menuItems.GetTextBoxByName(a_textBoxName);
 	SetText(textBox, a_text);
 }
-void DebugMenu::SetText(const char* a_textBoxName, float a_range)
+void DebugMenuUI::SetText(const char* a_textBoxName, float a_range)
 {
 	auto textBox = menuItems.GetTextBoxByName(a_textBoxName);
 	SetText(textBox, a_range);
 }
 
-bool DebugMenu::ButtonActionScriptMethod(const Button* a_button, const char* a_methodName)
+bool DebugMenuUI::ButtonActionScriptMethod(const Button* a_button, const char* a_methodName, RE::GFxValue a_args, uint32_t a_numArgs)
 {
 	if (!a_button) return false;
 
@@ -948,20 +1019,18 @@ bool DebugMenu::ButtonActionScriptMethod(const Button* a_button, const char* a_m
 
 	RE::GFxValue::DisplayInfo info;
 	buttonIcon.GetDisplayInfo(&info);
-	auto result = buttonIcon.Invoke(a_methodName, nullptr, nullptr, 0);
+	auto result = buttonIcon.Invoke(a_methodName, nullptr, &a_args, a_numArgs);
 	return result;
-	//logger::info("Invoking method {} for button {}. Result: {}", a_methodName, a_buttonName, result);
-
 }
 
-bool DebugMenu::ButtonActionScriptMethod(const ButtonPtr& a_button, const char* a_methodName)
+bool DebugMenuUI::ButtonActionScriptMethod(const ButtonPtr& a_button, const char* a_methodName, RE::GFxValue a_args, uint32_t a_numArgs)
 {
 	if (!a_button) return false;
-	return ButtonActionScriptMethod(a_button.get(), a_methodName);
+	return ButtonActionScriptMethod(a_button.get(), a_methodName, a_args, a_numArgs);
 }
 
 
-void DebugMenu::GetRoot(RE::GFxValue& root)
+void DebugMenuUI::GetRoot(RE::GFxValue& root)
 {
 	if (movie)
 	{
@@ -970,7 +1039,7 @@ void DebugMenu::GetRoot(RE::GFxValue& root)
 	else logger::debug("Failed to get root");
 }
 
-void DebugMenu::ScrollMenu(float a_distance, MenuPtr& a_menu)
+void DebugMenuUI::ScrollMenu(float a_distance, MenuPtr& a_menu)
 {
 	RE::GFxValue root;
 	GetRoot(root);
@@ -990,12 +1059,15 @@ void DebugMenu::ScrollMenu(float a_distance, MenuPtr& a_menu)
 
 	if (y > a_menu->maskItemsDefaultY) y = a_menu->maskItemsDefaultY;
 
-	float visibleSizeOfIcons = (y + a_menu->maskItemsYLocalOffset + a_menu->maskItemsHeight) - a_menu->maskYMin;
-	float minimumVisibleSize = a_menu->maskHeight*0.8f;
-	if (visibleSizeOfIcons < minimumVisibleSize)
+	float maskItemsBottomY = y + a_menu->y + a_menu->maskItemsHeight;
+	float emptyDistanceBeneathMaskItems = a_menu->maskYMax - maskItemsBottomY;
+	float minimumVisibleSize = a_menu->maskHeight*0.2f; // leave 20% empty space when scrolling is done
+		
+	if (emptyDistanceBeneathMaskItems > minimumVisibleSize)
 	{
-		y = minimumVisibleSize - a_menu->maskItemsYLocalOffset - a_menu->maskItemsHeight + a_menu->maskYMin;
+		y = a_menu->maskYMax - minimumVisibleSize - a_menu->y - a_menu->maskItemsHeight;
 	}
+
 
 	RE::GFxValue newY{ y };
 	bool res = maskItems.Invoke("SetY", nullptr, &newY, 1);
@@ -1033,25 +1105,28 @@ void DebugMenu::ScrollMenu(float a_distance, MenuPtr& a_menu)
 	}
 }
 
-void DebugMenu::SetNewRange(float& a_range, bool a_increase)
+void DebugMenuUI::SetNewRange(float& a_range, bool a_increase)
 {
 	{
 		if (a_increase)
 		{
+
 			float maxRange = MCM::settings::maxRange;
 			float step = MCM::settings::rangeStep;
+
 			a_range = std::min(a_range + step, maxRange);
 		}
 		else
 		{
 			float minRange = MCM::settings::minRange;
 			float step = MCM::settings::rangeStep;
+
 			a_range = std::max(a_range - step, minRange);
 		}
 	}
 }
 
-void DebugMenu::InitButtonActionFunctions()
+void DebugMenuUI::InitButtonActionFunctions()
 {
 	if (logUI) logger::debug("  Initializing button action functions...");
 
@@ -1061,6 +1136,11 @@ void DebugMenu::InitButtonActionFunctions()
 		else MCM::settings::dayNightIndex = 0;		
 
 		ButtonActionScriptMethod(a_button, "CycleIcon");
+	};
+
+	CloseMenuAction = [&](Button* a_button)
+	{
+		DebugMenu::GetDebugMenuHandler()->CloseAndReset();
 	};
 
 	CellBorderAction = [&](Button* a_button)
@@ -1098,6 +1178,7 @@ void DebugMenu::InitButtonActionFunctions()
 	NavMeshModeAction = [&](Button* a_button)
 	{
 		MCM::settings::useRuntimeNavmesh = a_button->isActive;
+		ButtonActionScriptMethod(a_button, "CycleIcon");
 	};
 
 	NavMeshTrianglesAction = [&](Button* a_button)
@@ -1136,6 +1217,7 @@ void DebugMenu::InitButtonActionFunctions()
 	MarkersAction = [&](Button* a_button)
 	{
 		MCM::settings::showMarkers = a_button->isActive;
+		if (!a_button->isActive) DebugMenu::GetMarkerHandler()->HideAllMarkers();
 	};
 
 	MarkersPlusAction = [&](Button* a_button)
@@ -1214,9 +1296,51 @@ void DebugMenu::InitButtonActionFunctions()
 		MCM::DebugMenuPresets::SaveMarkerSettings(currentMarkerPresetIndex);
 		HideMenu("SavePresetsMenu");
 	};
+
 	CancelSavePresetAction = [&](Button* a_button)
 	{
 		HideMenu("SavePresetsMenu");
+	};
+
+	CollisionAction = [&](Button* a_button)
+	{
+		MCM::settings::showCollision = a_button->isActive;
+	};
+
+	CollisionPlusAction = [&](Button* a_button)
+	{
+		SetNewRange(MCM::settings::collisionRange, true);
+		SetText("collisionRangeText", MCM::settings::collisionRange);
+	};
+
+	CollisionMinusAction = [&](Button* a_button)
+	{
+		SetNewRange(MCM::settings::collisionRange, false);
+		SetText("collisionRangeText", MCM::settings::collisionRange);
+	};
+
+	CollisionDisplayAction = [&](Button* a_button)
+	{
+		if (MCM::settings::collisionDisplayIndex < 2) MCM::settings::collisionDisplayIndex++;
+		else MCM::settings::collisionDisplayIndex = 0;
+
+		ButtonActionScriptMethod(a_button, "CycleIcon");
+		DebugMenu::GetCollisionHandler()->HideAllCollisions();
+	};
+
+	ClearSelectedRefsAction = [&](Button* a_button)
+	{
+		DebugMenu::GetCollisionHandler()->ResetSelectedRefs();
+	};
+
+	CollisionRenderAction = [&](Button* a_button)
+	{
+		MCM::settings::collisionOcclude = a_button->isActive;
+	};
+
+	CollisionShowNPCsAction = [&](Button* a_button)
+	{
+		MCM::settings::showCharController = a_button->isActive;
 	};
 
 

@@ -1,0 +1,43 @@
+#pragma once
+
+#include "VertexBuffer.h"
+#include "CBuffer.h"
+#include "Model.h"
+
+namespace Renderer 
+{
+	typedef struct MeshCreateInfo 
+	{
+		Model::Mesh* mesh = nullptr;
+		std::shared_ptr<Shader> vs;
+		std::shared_ptr<Shader> ps;
+	} MeshCreateInfo;
+
+	class MeshDrawer 
+	{
+		public:
+			MeshDrawer(MeshCreateInfo& info, const std::shared_ptr<Renderer::CBuffer>& perObjectBuffer, D3DContext& ctx)
+				noexcept;
+			~MeshDrawer();
+			MeshDrawer(const MeshDrawer&) = delete;
+			MeshDrawer(MeshDrawer&&) noexcept = delete;
+			MeshDrawer& operator=(const MeshDrawer&) = delete;
+			MeshDrawer& operator=(MeshDrawer&&) noexcept = delete;
+
+			// Draw the mesh using the given model matrix
+			void Submit(const glm::mat4& modelMatrix) noexcept;
+
+			// Set the shaders used by the mesh for rendering
+			void SetShaders(std::shared_ptr<Shader>& vs, std::shared_ptr<Shader>& ps);
+
+		private:
+			D3DContext context;
+			std::unique_ptr<VertexBuffer> vbo;
+			std::shared_ptr<CBuffer> cbufPerObject;
+			std::shared_ptr<Shader> vs;
+			std::shared_ptr<Shader> ps;
+
+			void CreateObjects(std::vector<Model::Vertex>& vertices, D3DContext& ctx);
+	};
+
+}

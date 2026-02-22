@@ -1,6 +1,6 @@
 #include "EventSink.h"
 #include "DrawMenu.h"
-#include "DebugHandler.h"
+#include "DebugMenu/DebugMenu.h"
 #include "DrawHandler.h"
 #include "DebugUIMenu.h"
 #include "UIHandler.h"
@@ -60,7 +60,7 @@ RE::BSEventNotifyControl EventSink::ProcessEvent(RE::InputEvent* const* eventPtr
 		}
 		// --------- for what can run whenever ----------------------------------------------
 
-		else if (UIHandler::GetSingleton()->isMenuOpen)
+		else if (DebugMenu::GetUIHandler()->isMenuOpen)
 		{
 			if ( keyCode == MCM::settings::openMenuHotkey)
 			{
@@ -71,30 +71,6 @@ RE::BSEventNotifyControl EventSink::ProcessEvent(RE::InputEvent* const* eventPtr
 	}
 	return RE::BSEventNotifyControl::kContinue;
 }
-
-RE::BSEventNotifyControl EventSink::ProcessEvent(const RE::TESCellFullyLoadedEvent* a_event, RE::BSTEventSource<RE::TESCellFullyLoadedEvent>*)
-{
-	if (MCM::settings::modActive && a_event)
-	{
-		DebugHandler::GetSingleton()->OnCellFullyLoaded(a_event->cell);
-	}
-	return RE::BSEventNotifyControl::kContinue;
-}
-
-static RE::BGSSoundDescriptorForm* GetSoundDescriptorFormFromEditorID(const char* a_editorID) // works better than RE::TESForm::LookupByEditorID
-{
-	using func_t = decltype(&GetSoundDescriptorFormFromEditorID);
-	REL::Relocation<func_t> func{ RELOCATION_ID(51246, 33044) };
-	return func(a_editorID);
-}
-
-static uint32_t LengthOfEditorID(uint32_t& a_value, const char* a_editorID, bool a_arg3) // works better than RE::TESForm::LookupByEditorID
-{
-	using func_t = decltype(&LengthOfEditorID);
-	REL::Relocation<func_t> func{ RELOCATION_ID(51246, 68216) };
-	return func(a_value, a_editorID, a_arg3);
-}
-
 
 void EventSink::HandleDebugMenu(bool a_isInputReleased)
 {
@@ -107,7 +83,7 @@ void EventSink::HandleDebugMenu(bool a_isInputReleased)
 	{
 		key1HasBeenProcessed = true;
 
-		auto g_UI = UIHandler::GetSingleton();
+		auto& g_UI = DebugMenu::GetUIHandler();
 
 		if (g_UI->isMenuOpen)
 		{
@@ -116,7 +92,7 @@ void EventSink::HandleDebugMenu(bool a_isInputReleased)
 		}
 		else
 		{
-			UIHandler::GetSingleton()->Init();
+			g_UI->Init();
 			auto player = RE::PlayerCharacter::GetSingleton();
 		}		
 	}
@@ -128,14 +104,14 @@ void EventSink::HandlePrimaryClick(bool a_isInputReleased)
 	{
 		key2HasBeenProcessed = false;
 
-		UIHandler::GetSingleton()->mouseReleased = true;
-		UIHandler::GetSingleton()->mousePressed = false;
+		DebugMenu::GetUIHandler()->mouseReleased = true;
+		DebugMenu::GetUIHandler()->mousePressed = false;
 	}
 	else if (!key2HasBeenProcessed)
 	{
 		key2HasBeenProcessed = true;
 
-		UIHandler::GetSingleton()->mousePressed = true;
+		DebugMenu::GetUIHandler()->mousePressed = true;
 	}
 }
 
@@ -148,8 +124,8 @@ void EventSink::HandleScrollUp(bool a_isInputReleased)
 	else if (!key3HasBeenProcessed)
 	{
 		key3HasBeenProcessed = true;
-		DrawHandler::GetSingleton()->InfoBoxScrollUp();
-		UIHandler::GetSingleton()->keyScrollUp = true;
+		DebugMenu::GetDrawHandler()->InfoBoxScrollUp();
+		DebugMenu::GetUIHandler()->keyScrollUp = true;
 	}
 }
 
@@ -162,8 +138,8 @@ void EventSink::HandleScrollDown(bool a_isInputReleased)
 	else if (!key4HasBeenProcessed)
 	{
 		key4HasBeenProcessed = true;
-		DrawHandler::GetSingleton()->InfoBoxScrollDown();
-		UIHandler::GetSingleton()->keyScrollDown = true;
+		DebugMenu::GetDrawHandler()->InfoBoxScrollDown();
+		DebugMenu::GetUIHandler()->keyScrollDown = true;
 	}
 }
 
@@ -172,7 +148,7 @@ void EventSink::HandleScrollWheelUp(bool a_isInputReleased)
 	if (!key5HasBeenProcessed)
 	{
 		key5HasBeenProcessed = true;
-		UIHandler::GetSingleton()->mouseScrollUp = true; // it is sat to false after it has been processed
+		DebugMenu::GetUIHandler()->mouseScrollUp = true; // it is sat to false after it has been processed
 	}
 	else
 	{
@@ -185,7 +161,7 @@ void EventSink::HandleScrollWheelDown(bool a_isInputReleased)
 	if (!key6HasBeenProcessed)
 	{
 		key6HasBeenProcessed = true;
-		UIHandler::GetSingleton()->mouseScrollDown = true; // it is sat to false after it has been processed
+		DebugMenu::GetUIHandler()->mouseScrollDown = true; // it is sat to false after it has been processed
 	}
 	else
 	{

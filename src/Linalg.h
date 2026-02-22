@@ -102,17 +102,13 @@ namespace Linalg
 			Matrix4			operator*(const Matrix4& a_matrix) const;
 
 			Matrix4			T() const;
-			Matrix4			Inverse(const Matrix4& Q, const Matrix4& R) const;
 
-			void QRDecomposition(Matrix4& Q, Matrix4& R) const;
 			void Print(const char* a_msg);
 
-		private:
-			static Vector4 solve(const Vector4& a_vector, const Matrix4& Q, const Matrix4& R);
 	};
 
-
-	void PrintMatrix(const char* a_title, RE::NiMatrix3 a_matrix);
-	void PrintMatrix(const char* a_title, float a_Matrix4[4][4]);
-	void PrintMatrix(const char* a_title, Matrix4 a_Matrix4);
+	void PrintMatrix(const char* a_title, RE::NiMatrix3 a_matrix, int a_indent = 0);
+	void PrintMatrix(const char* a_title, float a_Matrix4[4][4], int a_indent = 0);
+	void PrintMatrix(const char* a_title, glm::mat4 a_Matrix4, int a_indent = 0);
+	void PrintMatrix(const char* a_title, Matrix4 a_Matrix4, int a_indent = 0);
 }

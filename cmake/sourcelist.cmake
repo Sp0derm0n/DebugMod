@@ -1,11 +1,28 @@
 set(sources ${sources}
-	src/DebugHandler.cpp
+	src/DebugMenu/CellHandler.cpp
+	src/DebugMenu/CollisionHandler.cpp
+	src/DebugMenu/DebugItem.cpp
+	src/DebugMenu/DebugMenu.cpp
+	src/DebugMenu/InfoHandler.cpp
+	src/DebugMenu/MarkerHandler.cpp
+	src/DebugMenu/NavmeshHandler.cpp
+	src/DebugMenu/OcclusionHandler.cpp
+	src/DebugMenu/RefInspectorHandler.cpp
 	src/DebugUIMenu.cpp
 	src/DrawHandler.cpp
 	src/DrawMenu.cpp
 	src/EventSink.cpp
 	src/Linalg.cpp
 	src/MCM.cpp
+	src/RE.cpp
+	src/Renderer/CBuffer.cpp
+	src/Renderer/D3DContext.cpp
+	src/Renderer/Drawer.cpp
+	src/Renderer/MeshDrawer.cpp
+	src/Renderer/Model.cpp
+	src/Renderer/Renderer.cpp
+	src/Renderer/Shaders.cpp
+	src/Renderer/VertexBuffer.cpp
 	src/UIHandler.cpp
 	src/Utils.cpp
 	src/main.cpp

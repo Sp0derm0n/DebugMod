@@ -12,7 +12,7 @@ class formatter_flag : public spdlog::custom_flag_formatter
     public:
     void format(const spdlog::details::log_msg& msg, const std::tm&, spdlog::memory_buf_t& dest) override
     {
-        size_t longestFileName = "DebugHandler.cpp"s.size();
+        size_t longestFileName = "OcclusionHandler.cpp"s.size();
         size_t maxDigitsInLineNumber = 5;
         size_t digitsInLineNumber = std::to_string(msg.source.line).size();
 
