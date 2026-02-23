@@ -106,9 +106,9 @@ extern "C" __declspec( dllexport ) constinit auto SKSEPlugin_Version = []() {
 	v.PluginVersion(Version::VERSION);
 	v.PluginName(Version::NAME);
 	v.AuthorName("Spodermon");
-	//v.UsesAddressLibrary(true);
+	v.UsesAddressLibrary();
 	v.CompatibleVersions({ SKSE::RUNTIME_SSE_LATEST });
-	//v.HasNoStructUse(true);
+	v.UsesNoStructs();
 
 	return v;
 }();

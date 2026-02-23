@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 set(NAME "DebugMenu")
-set(VERSION 1.3.0)
+set(VERSION 3.0.1)
 
 # ------- Define project ----------
 
