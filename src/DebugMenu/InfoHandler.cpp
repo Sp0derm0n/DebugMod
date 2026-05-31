@@ -449,7 +449,6 @@ std::string DebugMenu::InfoHandler::GetSoundMarkerInfo()
 
 std::string DebugMenu::InfoHandler::GetCollisionLayerName(RE::COL_LAYER a_layer)
 {
-	logger::info("layer: {}", static_cast<int>(a_layer));
 	switch (a_layer)
 	{
 		case RE::COL_LAYER::kStatic:
