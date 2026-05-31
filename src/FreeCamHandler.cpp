@@ -47,8 +47,6 @@ void FreeCamHandler::HandleInput(uint32_t a_keyCode, bool a_isDown, float a_held
 	}
 	else if (a_keyCode == MCM::settings::ascendHotkey)
 	{
-		auto freecam = skyrim_cast<RE::FreeCameraState*>(RE::PlayerCamera::GetSingleton()->GetRuntimeData().cameraStates[RE::CameraState::kFree].get());
-		logger::info("freecam x address: {:X}", reinterpret_cast<uintptr_t>(freecam));
 		if (a_isDown)
 		{
 			auto clockNow = std::chrono::system_clock::now();
