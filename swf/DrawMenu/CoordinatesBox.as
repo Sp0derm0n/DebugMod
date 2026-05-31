@@ -34,4 +34,14 @@ class CoordinatesBox extends MovieClip
 		zTextField._visible = true;
 	}
 	
+	public function GetX():Number
+	{
+		return this._x + this.getBounds().xMin;
+	}
+	
+	public function GetY():Number
+	{
+		return this._y + this.getBounds().yMin;
+	}
+	
 }

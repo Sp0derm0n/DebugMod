@@ -34,33 +34,35 @@ namespace MCM
 
 	void Register();
 	void InitNonMCMSettings();
-	
-	// not in use yet
-	struct MarkerSetting
-	{
-		MarkerSetting(const std::string a_uiName, std::string a_identifier, std::string a_iniName, MarkerSetting* a_parent = nullptr) : 
-			uiDisplayName(a_uiName),
-			identifier(a_identifier),
-			iniName(a_iniName),
-			parent(a_parent),
-			settingValue(false)
-		{}
-
-		std::string uiDisplayName;
-		std::string identifier;
-		std::string iniName;
-		MarkerSetting* parent;
-		bool settingValue;
-		
-	};
 
 	struct settings
 	{
+		struct LightMode
+		{
+			const static uint32_t day = 0;
+			const static uint32_t night = 1;
+			const static uint32_t autoMode = 2;
+		};
+
+		struct CollisionDisplayMode
+		{
+			const static uint32_t multipleSelected = 0;
+			const static uint32_t consoleSelected = 1;
+			const static uint32_t inRange = 2;
+		};
+
+		struct NavmeshMode
+		{
+			const static uint32_t runtime = 0;
+			const static uint32_t creationKit = 1;
+		};
+
 		// Main
 		static inline uint32_t openMenuHotkey;
 		static inline uint32_t updateRate;
 		static inline uint32_t dayNightIndex;
 		static inline uint32_t collisionDisplayIndex;
+		static inline uint32_t navmeshModeIndex;
 		static inline uint32_t scrollUpHotkey;
 		static inline uint32_t scrollDownHotkey;
 		static inline uint32_t maxCollisions;
@@ -74,10 +76,11 @@ namespace MCM
 		static inline bool showCellWalls;
 		static inline bool showCellQuads;
 		static inline bool showNavmesh;
-		static inline bool useRuntimeNavmesh;
 		static inline bool showNavmeshTriangles;
 		static inline bool showNavmeshCover;
+		static inline bool showBoxes;
 		static inline bool showOcclusion;
+		static inline bool showCollisionMarkers;
 		static inline bool showCoordinates;
 		static inline bool showCoverBeams;
 		static inline bool showMarkers;
@@ -87,16 +90,25 @@ namespace MCM
 		static inline bool showCharController;
 		static inline bool useD3DMCMSetting; // Setting read from MCM
 		static inline bool useD3D; // setting which actually enableds funcitonality; This is sat in main after the first read of MCM settings, and will not be changed elsewhere; a restart is required to change it
-
+		static inline bool showToolTips;
 
 		static inline float infoRange;
 		static inline float canvasScale;
 		static inline float cellWallsHeight;
 		static inline float rangeStep;
 		static inline float navmeshRange;
-		static inline float occlusionRange;
+		static inline float boxesRange;
 		static inline float markersRange;
 		static inline float collisionRange;
+
+		// FreeCam
+		static inline uint32_t	ascendHotkey;
+		static inline uint32_t	descendHotkey;
+		static inline bool		enableFreeCamOnOpen;
+		static inline bool		useDoubleAscendToFly;
+		static inline bool		lockFreeCamToZPlane;
+		static inline bool		playerFollowsCamera;
+		static inline bool		useTFC;
 
 		// Colors
 		static inline uint32_t cellBorderColor;
@@ -115,6 +127,8 @@ namespace MCM
 		static inline uint32_t occlusionColor;
 		static inline uint32_t disabledOcclusionColor;
 		static inline uint32_t occlusionBorderColor;
+		static inline uint32_t collisionMarkerColor;
+		static inline uint32_t collisionMarkerBorderColor;
 		static inline uint32_t lightBulbInfoColor;
 		static inline uint32_t soundMarkerInfoColor;
 		static inline uint32_t collisionColorInt;
@@ -132,6 +146,8 @@ namespace MCM
 		static inline uint32_t navmeshMaxCoverBorderAlpha;
 		static inline uint32_t occlusionAlpha;
 		static inline uint32_t occlusionBorderAlpha;
+		static inline uint32_t collisionMarkerAlpha;
+		static inline uint32_t collisionMarkerBorderAlpha;
 		static inline uint32_t markerInfoAlpha;
 		static inline uint32_t collisionAlpha;
 
@@ -164,93 +180,162 @@ namespace MCM
 		//		make it save to the inis
 		//		add it in DebugUIMenu.cpp
 
-		static inline bool showFurnitureMarkers;
-		static inline bool showSitMarkers;
-		static inline bool showLeanMarkers;
-		static inline bool showSleepMarkers;
-
-		static inline bool showLightMarkers;
-		static inline bool showOmniMarkers;
-		static inline bool showShadowOmniMarkers;
-		static inline bool showShadowSpotMarkers;
-		static inline bool showShadowHemiMarkers;
-
-		static inline bool showMiscMarkers;
-		static inline bool showIdleMarkers;
-		static inline bool showSoundMarkers;
-		static inline bool showDragonMarkers;
-		static inline bool showCloudMarkers;
-		static inline bool showCritterMarkers;
-		static inline bool showFloraMarkers;
-		static inline bool showHazardMarkers;
-		static inline bool showTextureSetMarkers;
-
-		static inline bool showMovableStaticMarkers;
-		static inline bool showMistMarkers;
-		static inline bool showLightBeamMarkers;
-		static inline bool showOtherMSTTMarkers;
-
-		static inline bool showStaticMarkers;
-		static inline bool showXMarkers;
-		static inline bool showHeadingMarkers;
-		static inline bool showDoorTeleportMarkers;
-		static inline bool showOtherStaticMarkers;
-
-		static inline bool showActivatorMarkers;
-		static inline bool showImpactMarkers;
-		static inline bool showOtherActivatorMarkers;
-
-		static inline bool showCWMarkers;
-		static inline bool showCWAttackerMarkers;
-		static inline bool showCWDefenderMarkers;
-		static inline bool showOtherCWMarkers;
-
-
-		static inline bool GetShowFurnitureMarkers()		{ return showFurnitureMarkers; }
-		static inline bool GetShowSitMarkers()				{ return showFurnitureMarkers && showSitMarkers; }
-		static inline bool GetShowLeanMarkers()				{ return showFurnitureMarkers && showLeanMarkers; }
-		static inline bool GetShowSleepMarkers()			{ return showFurnitureMarkers && showSleepMarkers; }
-
-		static inline bool GetShowLightMarkers()			{ return showLightMarkers; }
-		static inline bool GetShowOmniMarkers()				{ return showLightMarkers && showOmniMarkers;}
-		static inline bool GetShowShadowOmniMarkers()		{ return showLightMarkers && showShadowOmniMarkers;}
-		static inline bool GetShowShadowSpotMarkers()		{ return showLightMarkers && showShadowSpotMarkers;}
-		static inline bool GetShowShadowHemiMarkers()		{ return showLightMarkers && showShadowHemiMarkers;}
-
-
-		static inline bool GetShowMiscMarkers()				{ return showMiscMarkers; }
-		static inline bool GetShowIdleMarkers()				{ return showMiscMarkers && showIdleMarkers; }
-		static inline bool GetShowSoundMarkers()			{ return showMiscMarkers && showSoundMarkers; }
-		static inline bool GetShowDragonMarkers()			{ return showMiscMarkers && showDragonMarkers; }
-		static inline bool GetShowCloudMarkers()			{ return showMiscMarkers && showCloudMarkers; }
-		static inline bool GetShowCritterMarkers()			{ return showMiscMarkers && showCritterMarkers; }
-		static inline bool GetShowFloraMarkers()			{ return showMiscMarkers && showFloraMarkers; }
-		static inline bool GetShowHazardMarkers()			{ return showMiscMarkers && showHazardMarkers; }
-		static inline bool GetShowTextureSetMarkers()		{ return showMiscMarkers && showTextureSetMarkers; }
-
-		static inline bool GetShowMovableStaticMarkers()	{ return showMovableStaticMarkers; }
-		static inline bool GetShowMistMarkers()				{ return showMovableStaticMarkers && showMistMarkers; }
-		static inline bool GetShowLightBeamMarkers()		{ return showMovableStaticMarkers && showLightBeamMarkers; }
-		static inline bool GetShowOtherMSTTMarkers()		{ return showMovableStaticMarkers && showOtherMSTTMarkers; }
-
-		static inline bool GetShowStaticMarkers()			{ return showStaticMarkers; }
-		static inline bool GetShowXMarkers()				{ return showStaticMarkers && showXMarkers; }
-		static inline bool GetShowHeadingMarkers()			{ return showStaticMarkers && showHeadingMarkers; }
-		static inline bool GetShowDoorTeleportMarkers()		{ return showStaticMarkers && showDoorTeleportMarkers; }
-		static inline bool GetShowOtherStaticMarkers()		{ return showStaticMarkers && showOtherStaticMarkers; }
-
-		static inline bool GetShowActivatorMarkers()		{ return showActivatorMarkers; }
-		static inline bool GetShowImpactMarkers()			{ return showActivatorMarkers && showImpactMarkers; }
-		static inline bool GetShowOtherActivatorMarkers()	{ return showActivatorMarkers && showOtherActivatorMarkers; }
-
-		static inline bool GetShowCWMarkers()				{ return showCWMarkers; }
-		static inline bool GetShowCWAttackerMarkers()		{ return showCWMarkers && showCWAttackerMarkers; }
-		static inline bool GetShowCWDefenderMarkers()		{ return showCWMarkers && showCWDefenderMarkers; }
-		static inline bool GetShowOtherCWMarkers()			{ return showCWMarkers && showOtherCWMarkers; }
 
 		static inline bool logUI;
 		static inline float uiScale;
+
 	};
 
-	
+	class MarkerSettings
+	{
+		public:
+			static MarkerSettings* GetSingleton()
+			{
+				static MarkerSettings singleton;
+				return std::addressof(singleton);
+			}
+
+			class ShowMarkerSetting
+			{
+				public:
+					ShowMarkerSetting(std::string a_label, std::string a_instanceName) : label(a_label), instanceName(a_instanceName) {}
+				
+					bool& GetRef() { return enabled; }
+					bool* GetPtr() { return &enabled; }
+					bool  IsEnabled()
+					{
+						if (parentSetting)
+						{
+							if (parentSetting->enabled) return enabled;
+							else return false;
+						}
+						else return enabled;
+					}
+					void AddChildSetting(std::string a_label, std::string a_instanceName, ShowMarkerSetting*& a_referencePtr)
+					{
+						auto newSetting = std::make_unique<ShowMarkerSetting>(a_label, a_instanceName);
+						newSetting->parentSetting = this;
+						a_referencePtr = newSetting.get();
+						subSettings.emplace_back(std::move(newSetting));
+					}
+					std::string GetLabel() const { return label; }
+					std::string GetInstanceName() const { return instanceName; }
+					std::vector<std::unique_ptr<ShowMarkerSetting>>& GetSubSettings() { return subSettings; }
+					
+					bool				HasParent() const { return parentSetting ? true : false; }
+					ShowMarkerSetting*	GetParent() const { return parentSetting; }
+
+				//private:
+					std::string										label = ""s;
+					std::string										instanceName = ""s;
+					bool											enabled = false;
+					ShowMarkerSetting*								parentSetting = nullptr;
+					std::vector<std::unique_ptr<ShowMarkerSetting>> subSettings{}; 
+
+			};
+
+			void InitShowMarkerSettings();
+
+			bool areMarkerSettingsInitialized = false;
+
+			ShowMarkerSetting* showFurnitureMarkers = nullptr;
+			ShowMarkerSetting* showSitMarkers = nullptr;
+			ShowMarkerSetting* showLeanMarkers = nullptr;
+			ShowMarkerSetting* showSleepMarkers = nullptr;
+
+			ShowMarkerSetting* showLightMarkers = nullptr;
+			ShowMarkerSetting* showOmniMarkers = nullptr;
+			ShowMarkerSetting* showShadowOmniMarkers = nullptr;
+			ShowMarkerSetting* showShadowSpotMarkers = nullptr;
+			ShowMarkerSetting* showShadowHemiMarkers = nullptr;
+
+			ShowMarkerSetting* showMiscMarkers = nullptr;
+			ShowMarkerSetting* showIdleMarkers = nullptr;
+			ShowMarkerSetting* showSoundMarkers = nullptr;
+			ShowMarkerSetting* showDragonMarkers = nullptr;
+			ShowMarkerSetting* showCloudMarkers = nullptr;
+			ShowMarkerSetting* showCritterMarkers = nullptr;
+			ShowMarkerSetting* showFloraMarkers = nullptr;
+			ShowMarkerSetting* showHazardMarkers = nullptr;
+
+			ShowMarkerSetting* showMovableStaticMarkers = nullptr;
+			ShowMarkerSetting* showMistMarkers = nullptr;
+			ShowMarkerSetting* showLightBeamMarkers = nullptr;
+			ShowMarkerSetting* showOtherMSTTMarkers = nullptr;
+
+			ShowMarkerSetting* showStaticMarkers = nullptr;
+			ShowMarkerSetting* showXMarkers = nullptr;
+			ShowMarkerSetting* showHeadingMarkers = nullptr;
+			ShowMarkerSetting* showDoorTeleportMarkers = nullptr;
+			ShowMarkerSetting* showOtherStaticMarkers = nullptr;
+
+			ShowMarkerSetting* showActivatorMarkers = nullptr;
+			ShowMarkerSetting* showImpactMarkers = nullptr;
+			ShowMarkerSetting* showOtherActivatorMarkers = nullptr;
+
+			ShowMarkerSetting* showCWMarkers = nullptr;
+			ShowMarkerSetting* showCWAttackerMarkers = nullptr;
+			ShowMarkerSetting* showCWDefenderMarkers = nullptr;
+			ShowMarkerSetting* showOtherCWMarkers = nullptr;
+		
+
+			std::vector<std::unique_ptr<ShowMarkerSetting>> markerGroupSettings;
+
+		private:
+
+			void AddMarkerGroupSetting(std::string a_label, std::string a_instanceName, ShowMarkerSetting*& a_referencePtr)
+			{
+				markerGroupSettings.push_back(std::make_unique<ShowMarkerSetting>(a_label, a_instanceName));
+				a_referencePtr = markerGroupSettings.back().get();
+			}
+
+
+		//static inline bool GetShowFurnitureMarkers()		{ return showFurnitureMarkers; }
+		//static inline bool GetShowSitMarkers()				{ return showFurnitureMarkers && showSitMarkers; }
+		//static inline bool GetShowLeanMarkers()				{ return showFurnitureMarkers && showLeanMarkers; }
+		//static inline bool GetShowSleepMarkers()			{ return showFurnitureMarkers && showSleepMarkers; }
+
+		//static inline bool GetShowLightMarkers()			{ return showLightMarkers; }
+		//static inline bool GetShowOmniMarkers()				{ return showLightMarkers && showOmniMarkers;}
+		//static inline bool GetShowShadowOmniMarkers()		{ return showLightMarkers && showShadowOmniMarkers;}
+		//static inline bool GetShowShadowSpotMarkers()		{ return showLightMarkers && showShadowSpotMarkers;}
+		//static inline bool GetShowShadowHemiMarkers()		{ return showLightMarkers && showShadowHemiMarkers;}
+
+
+		//static inline bool GetShowMiscMarkers()				{ return showMiscMarkers; }
+		//static inline bool GetShowIdleMarkers()				{ return showMiscMarkers && showIdleMarkers; }
+		//static inline bool GetShowSoundMarkers()			{ return showMiscMarkers && showSoundMarkers; }
+		//static inline bool GetShowDragonMarkers()			{ return showMiscMarkers && showDragonMarkers; }
+		//static inline bool GetShowCloudMarkers()			{ return showMiscMarkers && showCloudMarkers; }
+		//static inline bool GetShowCritterMarkers()			{ return showMiscMarkers && showCritterMarkers; }
+		//static inline bool GetShowFloraMarkers()			{ return showMiscMarkers && showFloraMarkers; }
+		//static inline bool GetShowHazardMarkers()			{ return showMiscMarkers && showHazardMarkers; }
+		//static inline bool GetShowTextureSetMarkers()		{ return showMiscMarkers && showTextureSetMarkers; }
+
+		//static inline bool GetShowMovableStaticMarkers()	{ return showMovableStaticMarkers; }
+		//static inline bool GetShowMistMarkers()				{ return showMovableStaticMarkers && showMistMarkers; }
+		//static inline bool GetShowLightBeamMarkers()		{ return showMovableStaticMarkers && showLightBeamMarkers; }
+		//static inline bool GetShowOtherMSTTMarkers()		{ return showMovableStaticMarkers && showOtherMSTTMarkers; }
+
+		//static inline bool GetShowStaticMarkers()			{ return showStaticMarkers; }
+		//static inline bool GetShowXMarkers()				{ return showStaticMarkers && showXMarkers; }
+		//static inline bool GetShowHeadingMarkers()			{ return showStaticMarkers && showHeadingMarkers; }
+		//static inline bool GetShowDoorTeleportMarkers()		{ return showStaticMarkers && showDoorTeleportMarkers; }
+		//static inline bool GetShowOtherStaticMarkers()		{ return showStaticMarkers && showOtherStaticMarkers; }
+
+		//static inline bool GetShowActivatorMarkers()		{ return showActivatorMarkers; }
+		//static inline bool GetShowImpactMarkers()			{ return showActivatorMarkers && showImpactMarkers; }
+		//static inline bool GetShowOtherActivatorMarkers()	{ return showActivatorMarkers && showOtherActivatorMarkers; }
+
+		//static inline bool GetShowCWMarkers()				{ return showCWMarkers; }
+		//static inline bool GetShowCWAttackerMarkers()		{ return showCWMarkers && showCWAttackerMarkers; }
+		//static inline bool GetShowCWDefenderMarkers()		{ return showCWMarkers && showCWDefenderMarkers; }
+		//static inline bool GetShowOtherCWMarkers()			{ return showCWMarkers && showOtherCWMarkers; }
+
+	};
+
+	static inline MarkerSettings* MSettings()
+	{
+		return MarkerSettings::GetSingleton();
+	}
 }

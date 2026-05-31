@@ -2,6 +2,19 @@
 
 namespace RE
 {
+	class BGSPrimitive
+	{
+		public:
+			inline static constexpr auto RTTI = RTTI_BGSPrimitive;
+			inline static constexpr auto VTABLE = VTABLE_BGSPrimitive;
+
+			virtual ~BGSPrimitive() = default;		// 00
+
+					// 1 = box, 3 = plane
+			uint32_t		type;			// 08
+			RE::NiPoint3	halfExtents;	// 0C
+	};
+
 	class hkpConvexTransformShapeBase : public hkpConvexShape
 	{
 		public:

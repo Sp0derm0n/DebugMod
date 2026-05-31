@@ -1,28 +1,31 @@
 #include "DrawHandler.h"
 #include "Linalg.h"
 #include "MCM.h"
-#include "UIHandler.h"
 #include "Renderer/Renderer.h"
 #include "DebugMenu/DebugMenu.h"
+#include "Interface/UIHandler.h"
 
 DrawHandler::DrawHandler()
 {
 	logger::debug("Initialized Drawhandler");
 }
 
-void DrawHandler::Init() // called on ui thread
+void DrawHandler::Init()
 {
 	GetDrawMenu();
-	if (!g_DrawMenu)
-	{
-		logger::debug("Failed to initialize camera handler");
-		return;
-	}
-	g_DrawMenu->HideBox("infoBox");
-	g_DrawMenu->HideBox("coordinatesBox");
+	//if (!g_DrawMenu)
+	//{
+	//	logger::debug("Failed to initialize camera handler");
+	//	return;
+	//}
+	//g_DrawMenu->HideBox("infoBox");
+	//g_DrawMenu->HideBox("coordinatesBox");
 
-	canvasWidth = g_DrawMenu->canvasWidth;
-	canvasHeight = g_DrawMenu->canvasHeight;
+	//canvasWidth = g_DrawMenu->canvasWidth;
+	//canvasHeight = g_DrawMenu->canvasHeight;
+
+	canvasWidth = ScaleformUI::UIHandler::GetSingleton()->drawMenu->ScreenW();
+	canvasHeight = ScaleformUI::UIHandler::GetSingleton()->drawMenu->ScreenH();
 
 	left = canvasWidth/2*(1-MCM::settings::canvasScale);
 	right = left + canvasWidth*MCM::settings::canvasScale;
@@ -32,29 +35,29 @@ void DrawHandler::Init() // called on ui thread
 	niCamera = GetNiCamera(RE::PlayerCamera::GetSingleton());
 	playerCamera = RE::PlayerCamera::GetSingleton();
 
-	if (!niCamera || !playerCamera) logger::debug("Failed to initialize camera handler");
+	if (!niCamera || !playerCamera) logger::debug("Failed to get cameras [{}|{}]", niCamera ? true : false, playerCamera ? true : false);
 	
 }
 
-void DrawHandler::InfoBoxScrollUp()
-{
-	if (!g_DrawMenu || !isMenuOpen || !isInfoBoxVisible) return;
-
-	infoBoxScroll -= linesScrolledPerClick;
-	if (infoBoxScroll < 1) infoBoxScroll = 1;
-
-	g_DrawMenu->SetScroll(infoBoxScroll, true /* scrollUp */);
-	
-}
-
-void DrawHandler::InfoBoxScrollDown()
-{
-	if (!g_DrawMenu || !isMenuOpen || !isInfoBoxVisible) return;
-
-	infoBoxScroll += linesScrolledPerClick;
-
-	g_DrawMenu->SetScroll(infoBoxScroll, false /* scrollUp */);
-}
+//void DrawHandler::InfoBoxScrollUp()
+//{
+//	if (!g_DrawMenu || !isMenuOpen || !isInfoBoxVisible) return;
+//
+//	infoBoxScroll -= linesScrolledPerClick;
+//	if (infoBoxScroll < 1) infoBoxScroll = 1;
+//
+//	g_DrawMenu->SetScroll(infoBoxScroll, true /* scrollUp */);
+//	
+//}
+//
+//void DrawHandler::InfoBoxScrollDown()
+//{
+//	if (!g_DrawMenu || !isMenuOpen || !isInfoBoxVisible) return;
+//
+//	infoBoxScroll += linesScrolledPerClick;
+//
+//	g_DrawMenu->SetScroll(infoBoxScroll, false /* scrollUp */);
+//}
 
 void DrawHandler::UpdateCanvasScale() 
 {
@@ -88,9 +91,14 @@ Linalg::Matrix4& DrawHandler::GetProjectionMatrix()
 	return projectionMatrix;
 }
 
+
+
 void DrawHandler::UpdateProjectionMatrix()
 {
+#undef ENABLE_SKYRIM_VR
 	projectionMatrix = Linalg::Matrix4(niCamera->GetRuntimeData().worldToCam);
+	//projectionMatrix = Linalg::Matrix4(
+		//RE::BSGraphics::State::GetSingleton()->FindCameraDataCache(niCamera.get(), false)->GetCameraStateRuntimeData().;
 }
 
 void DrawHandler::Update(float a_delta)
@@ -109,13 +117,13 @@ void DrawHandler::Update(float a_delta)
 
 	//auto end = std::chrono::high_resolution_clock::now();
 	//auto dt = std::chrono::duration_cast<std::chrono::microseconds>(end-begin).count();
-	//logger::info("time elapesed = {} µs", dt);
+	//logger::debug("time elapesed = {} µs", dt);
 }
 
 bool DrawHandler::IsShapeEligibleForInfo(const ShapeData* a_shape, const RE::NiPoint2& a_pointInShape, float a_depth)
 {
-	if (!a_shape->metaData || a_shape->metaData->infoType == DrawHandler::ShapeMetaData::InfoType::kNoInfo) return false;
-	if (!MCM::settings::showInfoOnHover || DebugMenu::GetUIHandler()->isMenuOpen) return false;
+	if (!a_shape->metaData || a_shape->metaData.infoType == DrawHandler::ShapeMetaData::InfoType::kNoInfo) return false;
+	if (!MCM::settings::showInfoOnHover || ScaleformUI::GetDebugMenuUI()->IsOpen()) return false;
 	if (a_depth > MCM::settings::infoRange) return false;
 
 	float centerX = canvasWidth / 2;
@@ -128,7 +136,7 @@ bool DrawHandler::IsShapeEligibleForInfo(const ShapeData* a_shape, const RE::NiP
 	return true;
 }
 
-void DrawHandler::AddEligibleInfoPoint(float a_pointDepth, const RE::NiPoint2& a_screenPoint, MetaDataPtr& a_metaData)
+void DrawHandler::AddEligibleInfoPoint(float a_pointDepth, const RE::NiPoint2& a_screenPoint, ShapeMetaData a_metaData)
 {
 	eligibleInfoPoints.push_back(ShowInfoData{ a_pointDepth, a_screenPoint, a_metaData});
 }
@@ -148,27 +156,31 @@ void DrawHandler::HandleInfo(float a_delta)
 
 			g_DrawMenu->DrawPoint(closestPoint.screenPoint, 15 * pointScaleMultiplier / closestPoint.depth, 0xFFFFFF, 100);
 
-			if (!isInfoBoxVisible || closestPoint != currentInfoData)
+			if (!isInfoBoxVisible)
 			{
 				isInfoBoxVisible = true;
+				ScaleformUI::UIHandler::GetSingleton()->ShowInfoBoxIfItsHidden();
+			}
+			if (closestPoint != currentInfoData)
+			{
 				DebugMenu::InfoHandler infoHandler{ closestPoint.shapeMetaData };
-				g_DrawMenu->SetInfoText(infoHandler.GetInfo());
+				ScaleformUI::UIHandler::GetSingleton()->SetInfoText(infoHandler.GetInfo());
 				currentInfoData = closestPoint;
+
 			}
 		}
 		timeHovering += a_delta;
 	}
 	else if (isInfoBoxVisible)
 	{
-		g_DrawMenu->HideBox("infoBox");
+		ScaleformUI::UIHandler::GetSingleton()->HideInfoBoxIfItsVisible();
+		//g_DrawMenu->HideBox("infoBox");
 		isInfoBoxVisible = false;
 		timeHovering = 0.0f;
 	}
 
 	eligibleInfoPoints.clear();
 }
-
-
 
 void DrawHandler::DrawPoints()
 {
@@ -332,6 +344,7 @@ DrawHandler::ScreenspacePoint DrawHandler::PointToScreenspace(const Linalg::Vect
 	y = (1 - y)/2 * canvasHeight;
 	return ScreenspacePoint(RE::NiPoint2(x, y), scale);
 }
+
 DrawHandler::ScreenspacePolygon DrawHandler::PolygonToScreenspace(const std::vector<Linalg::Vector4>& a_points)
 {
 	std::vector<RE::NiPoint2> screenspacePoints;
@@ -628,17 +641,17 @@ Linalg::Vector4 DrawHandler::worldToClipPoint(const RE::NiPoint3& a_position)
 	return GetProjectionMatrix()*Linalg::Vector4(a_position);
 }
 
-void DrawHandler::DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color, uint32_t a_alpha, MetaDataPtr a_metaData)
+void DrawHandler::DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color, uint32_t a_alpha, ShapeMetaData a_metaData)
 {
 	pointsToDraw.push_back(std::make_unique<PointData>(a_position, a_scale, a_color, a_alpha*alphaMultiplier, a_metaData));
 }
 
-void DrawHandler::DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine, MetaDataPtr a_metaData)
+void DrawHandler::DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine, ShapeMetaData a_metaData)
 {
 	linesToDraw.push_back(std::make_unique<LineData>(a_start, a_end, a_thickness, a_color, a_alpha*alphaMultiplier, a_isSimpleLine, a_metaData));
 }
 
-void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, uint32_t a_borderColor, bool a_useCustomBorderColor, MetaDataPtr a_metaData)
+void DrawHandler::DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha, uint32_t a_borderColor, bool a_useCustomBorderColor, ShapeMetaData a_metaData)
 {
 	polygonsToDraw.push_back(std::make_unique<PolygonData>(a_positions, a_borderThickness, a_color, a_baseAlpha*alphaMultiplier, a_useCustomBorderColor ? a_borderColor : a_color, a_borderAlpha*alphaMultiplier, a_metaData));
 }
@@ -672,7 +685,7 @@ void DrawHandler::BuildProjectionMatrix()
 	RE::NiPoint3 transformedOffset = offset - rotated3x3Component*cameraPosition;
 
 	cameraFacingDirection = cameraRotationMatrix*RE::NiPoint3(0, 1, 0);
-	float extraOffset = -cameraFacingDirection*cameraPosition;
+	float extraOffset = -cameraFacingDirection.Dot(cameraPosition);
 
 	projectionMatrix(0, 0) = rotated3x3Component.entry[0][0];
 	projectionMatrix(0, 1) = rotated3x3Component.entry[0][1];

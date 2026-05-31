@@ -267,7 +267,7 @@ namespace DebugMenu
 
 		switch (MCM::settings::collisionDisplayIndex)
 		{
-			case 0: // Range
+			case MCM::settings::CollisionDisplayMode::inRange:
 			{
 				Utils::ForEachCellInRange(RE::PlayerCharacter::GetSingleton()->GetPosition(), GetRange(), [&](const RE::TESObjectCELL* a_cell)
 				{
@@ -286,7 +286,7 @@ namespace DebugMenu
 				});
 				break;
 			}
-			case 1: // currently selected
+			case MCM::settings::CollisionDisplayMode::consoleSelected:
 			{
 				if (consoleRef)
 				{
@@ -294,7 +294,7 @@ namespace DebugMenu
 				}
 				break;
 			}
-			case 2: // multiple selected
+			case MCM::settings::CollisionDisplayMode::multipleSelected: 
 			{
 				for (auto& ref : selectedRefs)
 				{
@@ -409,32 +409,38 @@ namespace DebugMenu
 					// if index == 1, so the single collision that may be visible will be removed at the bottom of the loop
 					// and drawn anew afterwards
 
-					if (MCM::settings::collisionDisplayIndex == 0) // range mode
+					switch (MCM::settings::collisionDisplayIndex)
 					{
-						if (visibleCollision->GetSquareDistance(GetCenter()) < GetRange() * GetRange())
+						case MCM::settings::CollisionDisplayMode::inRange:
 						{
-							visibleCollision->UpdateCollision();
-							hideCollision = false;
-						}
-					}
-					else if (MCM::settings::collisionDisplayIndex == 1) // Console Selected
-					{
-						if (a_consoleRef && a_consoleRef->formID == visibleCollision->refFormID)
-						{
-							visibleCollision->UpdateCollision();
-							hideCollision = false;
-						}
-					}
-					else if (MCM::settings::collisionDisplayIndex == 2) // Multiple selected
-					{
-						for (auto& ref : selectedRefs)
-						{
-							if (ref->formID == visibleCollision->refFormID)
+							if (visibleCollision->GetSquareDistance(GetCenter()) < GetRange() * GetRange())
 							{
 								visibleCollision->UpdateCollision();
 								hideCollision = false;
-								break;
 							}
+							break;
+						}
+						case MCM::settings::CollisionDisplayMode::consoleSelected:
+						{
+							if (a_consoleRef && a_consoleRef->formID == visibleCollision->refFormID)
+							{
+								visibleCollision->UpdateCollision();
+								hideCollision = false;
+							}
+							break;
+						}
+						case MCM::settings::CollisionDisplayMode::multipleSelected:
+						{
+							for (auto& ref : selectedRefs)
+							{
+								if (ref->formID == visibleCollision->refFormID)
+								{
+									visibleCollision->UpdateCollision();
+									hideCollision = false;
+									break;
+								}
+							}
+							break;
 						}
 					}
 				}
@@ -527,7 +533,7 @@ namespace DebugMenu
 			{
 				if (const auto charController = actor->GetCharController())
 				{
-					bhkWorld = charController->GetWorldImpl();
+					bhkWorld = charController->GetHavokWorld();
 				}
 			}
 		}

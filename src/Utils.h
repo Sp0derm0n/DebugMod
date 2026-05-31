@@ -64,6 +64,8 @@ namespace Utils
 	// Turn a full convex hull consisting of m planes into a single list of triangles
 	std::vector<TriangleIndices> ConvexHullPlanesIndicesToTriangleIndices(const std::vector<std::vector<uint16_t>>& a_hull);
 	
+	std::string RemoveWhitespaceFromString(std::string a_string);
+
 
 	template <typename T>
 	inline RE::hkArray<T> GetEmptyHkArray()

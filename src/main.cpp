@@ -1,15 +1,23 @@
 ﻿#include "logger.h"
-#include "EventSink.h"
+#include "FreeCamHandler.h"
 #include "DrawMenu.h"
 #include "Hooks.h"
 #include "DebugMenu/DebugMenu.h"
 #include "DebugUIMenu.h"
 #include "MCM.h"
 #include "Renderer/Renderer.h"
+#include "Interface/UIHandler.h"
+#include "Interface/InputHandler.h"
 
 void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
     switch (a_message->type) 
 	{
+		case SKSE::MessagingInterface::kPostLoad:
+		{
+			Hooks::Hook_CellLoad::install();
+			Hooks::Hook_NavMeshLoad::install();
+			break;
+		}
 		case SKSE::MessagingInterface::kPostPostLoad:
 		{
 			MCM::Register();
@@ -21,24 +29,40 @@ void MessageHandler(SKSE::MessagingInterface::Message* a_message) {
 			DebugMenu::GetDebugMenuHandler()->Init();
 
 			Hooks::Hook_SoundMarkersSetFormEditorID::install();
+			//Hooks::Hook_LandLoad::install(); // landscape scroller
+			
+
+
+
 
 			break;
 		}
         case SKSE::MessagingInterface::kDataLoaded: 
 		{
-			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(EventSink::GetSingleton());
+			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(FreeCamHandler::GetSingleton());
+			RE::BSInputDeviceManager::GetSingleton()->AddEventSink(ScaleformUI::InputHandler::GetSingleton());
 			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink<RE::TESCellFullyLoadedEvent>(DebugMenu::GetNavmeshHandler().get());
 			RE::UI::GetSingleton()->AddEventSink<RE::MenuOpenCloseEvent>(DebugMenu::GetDebugMenuHandler().get());
 
 			DebugMenu::GetMarkerHandler()->InitPostDataLoaded();
+			FreeCamHandler::GetSingleton()->Init();
 
-			SKSE::AllocTrampoline(14);
+			ScaleformUI::UIHandler::GetSingleton()->Init();
+			ScaleformUI::InputHandler::GetSingleton()->Init();
+
+			// Updates
+			SKSE::AllocTrampoline(14*3);
 			Hooks::Hook_MainUpdate_sub_140437D40::Install();
-			Hooks::Hook_CellLoad::install();
-			Hooks::Hook_NavMeshLoad::install();
+			ScaleformUI::Hook_MainUpdate::Install();
+
+			// Free cam
+			Hooks::Hook_FreeCameraState_UpdatePosition_1408E0640::Install();
+			Hooks::Hook_FreeCameraBegin::install();
+			Hooks::Hook_FreeCameraEnd::install();
 
 			MCM::settings::logUI = false;
 			MCM::settings::uiScale = 1.0f;
+
 			
 			//bool* bShowMarkers = (bool*)RELOCATION_ID(508943, 381019).address();
 			//*bShowMarkers = true;

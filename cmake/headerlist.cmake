@@ -1,4 +1,5 @@
 set(headers ${headers}
+	src/DebugMenu/BoxHandler.h
 	src/DebugMenu/CellHandler.h
 	src/DebugMenu/CollisionHandler.h
 	src/DebugMenu/DebugItem.h
@@ -6,13 +7,26 @@ set(headers ${headers}
 	src/DebugMenu/InfoHandler.h
 	src/DebugMenu/MarkerHandler.h
 	src/DebugMenu/NavmeshHandler.h
-	src/DebugMenu/OcclusionHandler.h
 	src/DebugMenu/RefInspectorHandler.h
 	src/DebugUIMenu.h
 	src/DrawHandler.h
 	src/DrawMenu.h
-	src/EventSink.h
+	src/FreeCamHandler.h
 	src/Hooks.h
+	src/Interface/AnimationHandler.h
+	src/Interface/BoundingBox.h
+	src/Interface/Button.h
+	src/Interface/Element.h
+	src/Interface/GroupElement.h
+	src/Interface/IElement.h
+	src/Interface/InputHandler.h
+	src/Interface/Menu.h
+	src/Interface/Size.h
+	src/Interface/Textfield.h
+	src/Interface/UIHandler.h
+	src/Interface/UIUtils.h
+	src/Interface_prismaUI/InterfaceHandler.h
+	src/Interface_prismaUI/PrismaUI_API.h
 	src/Linalg.h
 	src/MCM.h
 	src/PCH.h
@@ -26,7 +40,6 @@ set(headers ${headers}
 	src/Renderer/Renderer.h
 	src/Renderer/Shaders.h
 	src/Renderer/VertexBuffer.h
-	src/UIHandler.h
 	src/Utils.h
 	src/logger.h
 )

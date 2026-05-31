@@ -49,87 +49,6 @@ void DrawMenu::clearCanvas()
 	}
 }
 
-void DrawMenu::GetBox(RE::GFxValue& a_box, const char* a_boxName)
-{
-	RE::GFxValue root;
-	if (movie)
-	{
-		movie->GetVariable(&root, "_root");
-	}
-	else logger::debug("Movie not obtained");
-
-	if (!root.IsObject())
-	{
-		logger::debug("Root not obtained");
-		return;
-	}
-
-	root.GetMember(a_boxName, &a_box);
-}
-
-void DrawMenu::ShowBox(const char* a_boxName)
-{
-	RE::GFxValue box;
-	GetBox(box, a_boxName);
-
-	auto res = box.Invoke("Show", nullptr, nullptr, 0);
-}
-
-void DrawMenu::HideBox(const char* a_boxName)
-{
-	RE::GFxValue box;
-	GetBox(box, a_boxName);
-
-	auto res = box.Invoke("Hide", nullptr, nullptr, 0);
-}
-
-void DrawMenu::SetScroll(int32_t& a_scroll, bool a_scrollUp)
-{
-	RE::GFxValue infoBox;
-	GetBox(infoBox, "infoBox");
-
-	RE::GFxValue getMaxScroll;
-	bool res = infoBox.Invoke("GetMaxScroll", &getMaxScroll, nullptr, 0);
-
-	int maxScroll = getMaxScroll.GetNumber();
-	if (a_scroll > maxScroll) a_scroll = maxScroll;
-
-	RE::GFxValue argsScroll{ a_scroll };
-	if (a_scrollUp) res = infoBox.Invoke("ScrollUp", nullptr, &argsScroll, 1);
-	else res = infoBox.Invoke("ScrollDown", nullptr, &argsScroll, 1);
-
-	//logger::info("Trying to set scroll to: {}, res: {}", a_scroll, res);
-}
-
-void DrawMenu::SetInfoText(const std::string& a_text)
-{
-	RE::GFxValue infoBox;
-	GetBox(infoBox, "infoBox");
-
-	RE::GFxValue argsText{ a_text };
-	auto res = infoBox.Invoke("SetText", nullptr, &argsText, 1);
-
-	RE::GFxValue _lastTextLine;
-	infoBox.Invoke("GetLastLine", &_lastTextLine, nullptr, 0);
-
-	SetScroll(DebugMenu::GetDrawHandler()->infoBoxScroll, false);
-	ShowBox("infoBox");
-}
-
-void DrawMenu::SetCoordinates(float a_x, float a_y, float a_z)
-{
-	RE::GFxValue coordinatesBox;
-	GetBox(coordinatesBox, "coordinatesBox");
-
-	const std::string xString = fmt::format("x: {:>7.0f}", a_x);
-	const std::string yString = fmt::format("y: {:>7.0f}", a_y);
-	const std::string zString = fmt::format("z: {:>7.0f}", a_z);
-
-	RE::GFxValue argsText[3]; argsText[0] = xString; argsText[1] = yString; argsText[2] = zString;
-	auto res = coordinatesBox.Invoke("SetCoordinates", nullptr, argsText, 3);
-}
-
-
 void DrawMenu::DrawPoint(RE::NiPoint2 a_position, float a_radius, uint32_t a_color, uint32_t a_alpha)
 {
 	if (!movie) 
@@ -278,8 +197,7 @@ void DrawMenu::DrawLine(RE::NiPoint2 a_start, RE::NiPoint2 a_end, float a_startR
 void DrawMenu::DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderColor, uint32_t a_borderAlpha)
 {
 	if (!movie) return;
-
-	/**/
+	
 
 	RE::GFxValue argsLineStyle[3]{ a_borderThickness, a_borderColor, a_borderAlpha};
 	movie->Invoke("lineStyle", nullptr, argsLineStyle, 3);
@@ -289,49 +207,13 @@ void DrawMenu::DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a
 
 	RE::GFxValue argsStartPos[2]{ a_positions[0].x, a_positions[0].y};
 	movie->Invoke("moveTo", nullptr, argsStartPos, 2);
-	/*
-	for (int i = 1; i < 3; i++)
-	{
-		RE::GFxValue argsNextPos[2]{ a_positions[i].x, a_positions[i].y};
-		movie->Invoke("lineTo", nullptr, argsNextPos, 2);
-	}
-	movie->Invoke("lineTo", nullptr, argsStartPos, 2);
-
-	int first = a_positions.size()-1;
-	int last = 2;
-	int sgn = 1;
-	int count = 0;
-	while (first != last && count < 100)
-	{
-		count++;
-		logger::info("first, last, {}, {}", first, last );
-		RE::GFxValue argsFirstPos[2]{ a_positions[first].x, a_positions[first].y};
-		RE::GFxValue argsLastPos[2]{ a_positions[last].x, a_positions[last].y};
-
-		movie->Invoke("lineTo", nullptr, argsFirstPos, 2);
-		movie->Invoke("lineTo", nullptr, argsLastPos, 2);
-
-		if (first - last > -1.5 && first - last < 1.5) break;
-
-		int placeholder = first;
-		first = last + sgn;
-		if (first == last) break;
-		last = placeholder - sgn;
-		logger::info("after change: first, last, {}, {}", first, last);
-		sgn *= -1;
-	} 
-
-	movie->Invoke("endFill", nullptr, nullptr, 0);
-	*/
-
-	//*
+	
 	for (int i = 1; i < a_positions.size(); i++)
 	{
 		RE::GFxValue argsNextPos[2]{ a_positions[i].x, a_positions[i].y};
 		movie->Invoke("lineTo", nullptr, argsNextPos, 2);
 	}
 	movie->Invoke("endFill", nullptr, nullptr, 0);
-	//*/
 }
 
 void DrawMenu::DrawTriangle(RE::NiPoint2 a_positions[3], uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha)

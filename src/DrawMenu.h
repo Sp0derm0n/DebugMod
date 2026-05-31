@@ -13,13 +13,6 @@ class DrawMenu : public RE::IMenu
 		void DrawSquare(RE::NiPoint2 a_leftLowerCorner, RE::NiPoint2 a_leftUpperCorner, RE::NiPoint2 a_rightUpperCorner, RE::NiPoint2 a_rightLowerCorner, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderAlpha);
 		void DrawPolygon(const std::vector<RE::NiPoint2>& a_positions, float a_borderThickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderColor, uint32_t a_borderAlpha);
 
-		void GetBox(RE::GFxValue& a_box, const char* a_boxName);
-		void ShowBox(const char* a_boxName);
-		void HideBox(const char* a_boxName);
-		void SetInfoText(const std::string& a_text);
-		void SetScroll(int32_t& a_scroll, bool a_scrollUp);
-		void SetCoordinates(float a_x, float a_y, float a_z);
-
 		float canvasWidth;
 		float canvasHeight;
 

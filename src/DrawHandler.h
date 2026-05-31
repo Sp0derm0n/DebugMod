@@ -30,28 +30,43 @@ class DrawHandler
 				kNavmesh,
 				kNavmeshCover,
 				kOcclusion,
+				kCollisionMarker,
 				kRef,
 				kLightMarker,
 				kSoundMarker
 			};
+
 			InfoType infoType = InfoType::kNoInfo;
 			RE::FormID formID = 0x0;
 			const RE::TESObjectCELL* cell = nullptr;
 			const RE::TESObjectREFR* ref = nullptr;
-			RE::NiPoint3 occlusionBounds{ 0.0f, 0.0f, 0.0f };
+			RE::NiPoint3 bounds{ 0.0f, 0.0f, 0.0f };
 			int8_t quad = -1;
 			uint8_t coverEdge = 0;
 			uint16_t navmeshTraversalFlags = 0;
+			RE::COL_LAYER colliisonLayer = RE::COL_LAYER::kUnidentified;
 
+			ShapeMetaData() {}
 
+			constexpr operator bool() const { return infoType != InfoType::kNoInfo; }
+			const bool operator==(ShapeMetaData a_other) const
+			{
+				return	(formID == a_other.formID) && 
+						(cell == a_other.cell) &&
+						(quad == a_other.quad) &&
+						(coverEdge == a_other.coverEdge) &&
+						(navmeshTraversalFlags == a_other.navmeshTraversalFlags);
+			}
+			const bool operator!=(ShapeMetaData a_other) const
+			{
+				return !(*this == a_other);
+			}
 		};
-
-		using MetaDataPtr = std::shared_ptr<ShapeMetaData>;
 
 		struct ShapeData
 		{
-			MetaDataPtr metaData = nullptr;
-			ShapeData(MetaDataPtr a_metaData) : metaData(a_metaData) {}
+			ShapeMetaData metaData{};
+			ShapeData(ShapeMetaData a_metaData) : metaData(a_metaData) {}
 			ShapeData() {}
 		};
 
@@ -61,7 +76,7 @@ class DrawHandler
 			float radius;
 			uint32_t color;
 			uint32_t alpha;
-			PointData(RE::NiPoint3 a_pos, float a_radius, uint32_t a_color, uint32_t a_alpha, MetaDataPtr a_metaData) :
+			PointData(RE::NiPoint3 a_pos, float a_radius, uint32_t a_color, uint32_t a_alpha, ShapeMetaData a_metaData) :
 				ShapeData(a_metaData), position(a_pos), radius(a_radius), color(a_color), alpha(a_alpha)
 			{}
 		};
@@ -74,7 +89,7 @@ class DrawHandler
 			uint32_t color;
 			uint32_t alpha;
 			bool isSimpleLine;
-			LineData(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine, MetaDataPtr a_metaData) :
+			LineData(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color, uint32_t a_alpha, bool a_isSimpleLine, ShapeMetaData a_metaData) :
 				ShapeData(a_metaData),
 				start(a_start), 
 				end(a_end), 
@@ -93,7 +108,7 @@ class DrawHandler
 			uint32_t baseAlpha;
 			uint32_t borderColor;
 			uint32_t borderAlpha;
-			PolygonData(std::vector<RE::NiPoint3> a_positions, float a_thickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderColor, uint32_t a_borderAlpha, MetaDataPtr a_metaData) :
+			PolygonData(std::vector<RE::NiPoint3> a_positions, float a_thickness, uint32_t a_color, uint32_t a_baseAlpha, uint32_t a_borderColor, uint32_t a_borderAlpha, ShapeMetaData a_metaData) :
 				ShapeData(a_metaData),
 				positions(a_positions), 
 				borderThickness(a_thickness), 
@@ -130,9 +145,9 @@ class DrawHandler
 		RE::NiPointer<RE::NiCamera> niCamera;
 		RE::PlayerCamera* playerCamera;
 
-		std::vector<std::unique_ptr<PointData>> pointsToDraw;
-		std::vector<std::unique_ptr<LineData>> linesToDraw;
-		std::vector<std::unique_ptr<PolygonData>> polygonsToDraw;
+		std::vector<std::unique_ptr<PointData>>		pointsToDraw;
+		std::vector<std::unique_ptr<LineData>>		linesToDraw;
+		std::vector<std::unique_ptr<PolygonData>>	polygonsToDraw;
 
 		DrawHandler();
 		void Init();
@@ -144,19 +159,16 @@ class DrawHandler
 		void UpdateProjectionMatrix();
 		Linalg::Matrix4& GetProjectionMatrix();
 
-		void DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100, MetaDataPtr a_metaData = nullptr);
-		void DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100, bool a_isSimpleLine = true, MetaDataPtr a_metaData = nullptr);
-		void DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness = 2, uint32_t a_color = 0xFFFFFF, uint32_t a_baseAlpha = 50, uint32_t a_borderAlpha = 0, uint32_t a_borderColor = 0xFFFFFF, bool a_useCustomBorderColor = false, MetaDataPtr a_metaData = nullptr);
-
-		void InfoBoxScrollUp();
-		void InfoBoxScrollDown();
+		void DrawPoint(RE::NiPoint3 a_position, float a_scale, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100, ShapeMetaData a_metaData = {});
+		void DrawLine(RE::NiPoint3 a_start, RE::NiPoint3 a_end, float a_thickness, uint32_t a_color = 0xFFFFFF, uint32_t a_alpha = 100, bool a_isSimpleLine = true, ShapeMetaData a_metaData = {});
+		void DrawPolygon(std::vector<RE::NiPoint3> a_positions, float a_borderThickness = 2, uint32_t a_color = 0xFFFFFF, uint32_t a_baseAlpha = 50, uint32_t a_borderAlpha = 0, uint32_t a_borderColor = 0xFFFFFF, bool a_useCustomBorderColor = false, ShapeMetaData a_metaData = {});
 		
 	private:
 		struct ShowInfoData
 		{
 			float depth = 0.0f;
 			RE::NiPoint2 screenPoint{ 0.0f, 0.0f };
-			MetaDataPtr shapeMetaData = nullptr;
+			ShapeMetaData shapeMetaData;
 
 			const bool operator==(ShowInfoData& a_other) const { return shapeMetaData == a_other.shapeMetaData; }
 			const bool operator!=(ShowInfoData& a_other) const { return shapeMetaData != a_other.shapeMetaData; }
@@ -171,7 +183,7 @@ class DrawHandler
 
 
 		bool						IsShapeEligibleForInfo(const ShapeData* a_shape, const RE::NiPoint2& a_pointInShape, float a_depth);
-		void						AddEligibleInfoPoint(float a_pointDepth, const RE::NiPoint2& a_screenPoint, MetaDataPtr& metaData);
+		void						AddEligibleInfoPoint(float a_pointDepth, const RE::NiPoint2& a_screenPoint, ShapeMetaData metaData);
 		void						HandleInfo(float a_delta);
 
 

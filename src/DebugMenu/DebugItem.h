@@ -5,6 +5,7 @@
 #include "Utils.h"
 
 using InfoType = DrawHandler::ShapeMetaData::InfoType;
+using MetaData = DrawHandler::ShapeMetaData;
 
 namespace DebugMenu
 {
@@ -26,8 +27,6 @@ namespace DebugMenu
 			DebugItem() {}
 
 		protected:
-			inline DrawHandler::MetaDataPtr CreateMetaData(){ return std::make_shared<DrawHandler::ShapeMetaData>(); }
-
 			virtual RE::NiPoint3 GetCenter() { return RE::PlayerCharacter::GetSingleton()->GetPosition(); }
 			virtual float		 GetRange() { return 0; }
 	};		

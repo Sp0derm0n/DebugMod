@@ -7,7 +7,10 @@ cmake-build*
 notes
 src/todo.txt
 src/*.TMP
+src/Interface_prismaUI
+src/Interface/Documentation.md
 swf/*.swf
 swf/DebugMenu/*.swf
 swf/DrawMenu/*.swf
+sfx
 

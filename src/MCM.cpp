@@ -2,7 +2,6 @@
 #include <SimpleIni.h>
 #include "DrawHandler.h"
 #include "DebugMenu/DebugMenu.h"
-#include "UIHandler.h"
 
 namespace MCM
 {
@@ -16,7 +15,6 @@ namespace MCM
 		if (!settings::modActive)
 		{
 			DebugMenu::GetDebugMenuHandler()->CloseDrawMenu();
-			DebugMenu::GetUIHandler()->Unload();
 			MCM::settings::showCellBorders = false;
 			MCM::settings::showNavmesh = false;
 			MCM::settings::showOcclusion = false;
@@ -58,15 +56,17 @@ namespace MCM
 		{
 			ReadUInt32Setting(ini, "Main", "uDayNightMode",			settings::dayNightIndex);
 			ReadUInt32Setting(ini, "Main", "uCollisionDisplayMode",	settings::collisionDisplayIndex);
+			ReadUInt32Setting(ini, "Main", "uNavmeshDisplayMode",	settings::navmeshModeIndex);
 
 			ReadBoolSetting(ini, "Main", "bShowCellBorderOnMenuOpen",		settings::showCellBorders);
 			ReadBoolSetting(ini, "Main", "bShowCellBorderWallsOnMenuOpen",	settings::showCellWalls);
 			ReadBoolSetting(ini, "Main", "bShowCellQuadsOnMenuOpen",		settings::showCellQuads);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshOnMenuOpen",			settings::showNavmesh);
-			ReadBoolSetting(ini, "Main", "bShowRuntimeNavmeshOnMenuOpen",	settings::useRuntimeNavmesh);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshTrianglesOnMenuOpen",	settings::showNavmeshTriangles);
 			ReadBoolSetting(ini, "Main", "bShowNavmeshCoverOnMenuOpen",		settings::showNavmeshCover);
+			ReadBoolSetting(ini, "Main", "bShowBoxesOnMenuOpen",			settings::showBoxes);
 			ReadBoolSetting(ini, "Main", "bShowOcclusionOnMenuOpen",		settings::showOcclusion);
+			ReadBoolSetting(ini, "Main", "bShowCollisionMarkersOnMenuOpen",	settings::showCollisionMarkers);
 			ReadBoolSetting(ini, "Main", "bShowCoordinatesOnMenuOpen",		settings::showCoordinates);
 			ReadBoolSetting(ini, "Main", "bShowMarkersOnMenuOpen",			settings::showMarkers);
 			ReadBoolSetting(ini, "Main", "bShowMarkersOnMenuOpen",			settings::showMarkers);
@@ -76,10 +76,16 @@ namespace MCM
 			ReadBoolSetting(ini, "Main", "bUseDirectX",						settings::useD3DMCMSetting);
 
 
-			ReadFloatSetting(ini, "Main", "fNavmeshRange",			settings::navmeshRange);
-			ReadFloatSetting(ini, "Main", "fOcclusionRange",		settings::occlusionRange);
-			ReadFloatSetting(ini, "Main", "fMarkersRange",			settings::markersRange);
-			ReadFloatSetting(ini, "Main", "fCollisionRange",		settings::collisionRange);
+			ReadFloatSetting(ini, "Main", "fNavmeshRange",				settings::navmeshRange);
+			ReadFloatSetting(ini, "Main", "fOcclusionRange",			settings::boxesRange);
+			ReadFloatSetting(ini, "Main", "fMarkersRange",				settings::markersRange);
+			ReadFloatSetting(ini, "Main", "fCollisionRange",			settings::collisionRange);
+
+			// Free Cam
+			ReadBoolSetting(ini, "FreeCam", "bEnableOnFirstMenuOpen",	settings::enableFreeCamOnOpen);
+			ReadBoolSetting(ini, "FreeCam", "bUseDoubleAscendToFly",	settings::useDoubleAscendToFly);
+			ReadBoolSetting(ini, "FreeCam", "bLockFreeCamToZPlane",		settings::lockFreeCamToZPlane);
+			ReadBoolSetting(ini, "FreeCam", "bPlayerFollowsCam",		settings::playerFollowsCamera);
 		}
 
 		ReadBoolSetting(ini, "Main", "bCleanCollisions", settings::cleanCollisions);
@@ -92,6 +98,15 @@ namespace MCM
 		ReadFloatSetting(ini, "Main", "fCellBorderWallsHeight", settings::cellWallsHeight);
 		ReadFloatSetting(ini, "Main", "fRangeStep",				settings::rangeStep);
 		
+		// UI
+		ReadBoolSetting(ini, "UI", "bShowToolTips", settings::showToolTips);
+
+
+		// Free Cam
+		ReadUInt32Setting(ini, "FreeCam", "uAscendHotkey",	settings::ascendHotkey);
+		ReadUInt32Setting(ini, "FreeCam", "uDescendHotkey", settings::descendHotkey);
+
+		ReadBoolSetting(ini, "FreeCam", "bUseTFC", settings::useTFC);
 
 		// Colors
 		ReadUInt32Setting(ini, "Colors", "uCellBorderColor",				settings::cellBorderColor);
@@ -110,6 +125,8 @@ namespace MCM
 		ReadUInt32Setting(ini, "Colors", "uOcclusionColor",					settings::occlusionColor);
 		ReadUInt32Setting(ini, "Colors", "uDisabledOcclusionColor",			settings::disabledOcclusionColor);
 		ReadUInt32Setting(ini, "Colors", "uOcclusionBorderColor",			settings::occlusionBorderColor);
+		ReadUInt32Setting(ini, "Colors", "uCollisionMarkerColor",			settings::collisionMarkerColor);
+		ReadUInt32Setting(ini, "Colors", "uCollisionMarkerBorderColor",		settings::collisionMarkerBorderColor);
 		ReadUInt32Setting(ini, "Colors", "uLightBulbInfoColor",				settings::lightBulbInfoColor);
 		ReadUInt32Setting(ini, "Colors", "uSoundMarkerInfoColor",			settings::soundMarkerInfoColor);
 		ReadUInt32Setting(ini, "Colors", "uCollisionColor",					settings::collisionColorInt);
@@ -128,6 +145,8 @@ namespace MCM
 		ReadUInt32Setting(ini, "Alpha", "uNavmeshMaxCoverBorderAlpha",	settings::navmeshMaxCoverBorderAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uOcclusionAlpha",				settings::occlusionAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uOcclusionBorderAlpha",		settings::occlusionBorderAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCollisionMarkerAlpha",		settings::collisionMarkerAlpha);
+		ReadUInt32Setting(ini, "Alpha", "uCollisionMarkerBorderAlpha",	settings::collisionMarkerBorderAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uMarkerInfoAlpha",				settings::markerInfoAlpha);
 		ReadUInt32Setting(ini, "Alpha", "uCollisionAlpha",				settings::collisionAlpha);
 
@@ -205,10 +224,16 @@ namespace MCM
 	{
 		settings::minRange = 500.0f;
 		settings::maxRange = 15000.0f;
+		MSettings()->InitShowMarkerSettings();
 	}
 
 	void DebugMenuPresets::Init()
 	{
+		if (!MSettings()->areMarkerSettingsInitialized)
+		{
+			logger::debug("ERROR: Tried to load marker settings before they were initialized");
+			return;
+		}
 		LoadMarkerSettings(0); // preset 0 = last session
 	}
 
@@ -250,47 +275,47 @@ namespace MCM
 			}
 		}
 
-		ReadWriteSetting(ini, "Markers", "bFurniture",		a_save, MCM::settings::showFurnitureMarkers);
-		ReadWriteSetting(ini, "Markers", "bSit",			a_save, MCM::settings::showSitMarkers);
-		ReadWriteSetting(ini, "Markers", "bLean",			a_save, MCM::settings::showLeanMarkers);
-		ReadWriteSetting(ini, "Markers", "bSleep",			a_save, MCM::settings::showSleepMarkers);
+		ReadWriteSetting(ini, "Markers", "bFurniture",		a_save, MCM::MSettings()->showFurnitureMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bSit",			a_save, MCM::MSettings()->showSitMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bLean",			a_save, MCM::MSettings()->showLeanMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bSleep",			a_save, MCM::MSettings()->showSleepMarkers->GetRef());
 
-		ReadWriteSetting(ini, "Markers", "bLight",			a_save, MCM::settings::showLightMarkers);
-		ReadWriteSetting(ini, "Markers", "bOmni",			a_save, MCM::settings::showOmniMarkers);
-		ReadWriteSetting(ini, "Markers", "bShadowOmni",		a_save, MCM::settings::showShadowOmniMarkers);
-		ReadWriteSetting(ini, "Markers", "bShadowSpot",		a_save, MCM::settings::showShadowSpotMarkers);
-		ReadWriteSetting(ini, "Markers", "bShadowHemi",		a_save, MCM::settings::showShadowHemiMarkers);
+		ReadWriteSetting(ini, "Markers", "bLight",			a_save, MCM::MSettings()->showLightMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bOmni",			a_save, MCM::MSettings()->showOmniMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bShadowOmni",		a_save, MCM::MSettings()->showShadowOmniMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bShadowSpot",		a_save, MCM::MSettings()->showShadowSpotMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bShadowHemi",		a_save, MCM::MSettings()->showShadowHemiMarkers->GetRef());
 
 
-		ReadWriteSetting(ini, "Markers", "bMisc",			a_save, MCM::settings::showMiscMarkers);
-		ReadWriteSetting(ini, "Markers", "bIdle",			a_save, MCM::settings::showIdleMarkers);
-		ReadWriteSetting(ini, "Markers", "bSound",			a_save, MCM::settings::showSoundMarkers);
-		ReadWriteSetting(ini, "Markers", "bDragon",			a_save, MCM::settings::showDragonMarkers);
-		ReadWriteSetting(ini, "Markers", "bCloud",			a_save, MCM::settings::showCloudMarkers);
-		ReadWriteSetting(ini, "Markers", "bCritter",		a_save, MCM::settings::showCritterMarkers);
-		ReadWriteSetting(ini, "Markers", "bFlora",			a_save, MCM::settings::showFloraMarkers);
-		ReadWriteSetting(ini, "Markers", "bHazard",			a_save, MCM::settings::showHazardMarkers);
-		//ReadWriteSetting(ini, "Markers", "bTextureSet",		a_save, MCM::settings::showTextureSetMarkers);
+		ReadWriteSetting(ini, "Markers", "bMisc",			a_save, MCM::MSettings()->showMiscMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bIdle",			a_save, MCM::MSettings()->showIdleMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bSound",			a_save, MCM::MSettings()->showSoundMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bDragon",			a_save, MCM::MSettings()->showDragonMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bCloud",			a_save, MCM::MSettings()->showCloudMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bCritter",		a_save, MCM::MSettings()->showCritterMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bFlora",			a_save, MCM::MSettings()->showFloraMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bHazard",			a_save, MCM::MSettings()->showHazardMarkers->GetRef());
+		//ReadWriteSetting(ini, "Markers", "bTextureSet",		a_save, MCM::MSettings()->showTextureSetMarkers);
 
-		ReadWriteSetting(ini, "Markers", "bMovableStatic",	a_save, MCM::settings::showMovableStaticMarkers);
-		ReadWriteSetting(ini, "Markers", "bMist",			a_save, MCM::settings::showMistMarkers);
-		ReadWriteSetting(ini, "Markers", "bLightBeam",		a_save, MCM::settings::showLightBeamMarkers);
-		ReadWriteSetting(ini, "Markers", "bOtherMSTT",		a_save, MCM::settings::showOtherMSTTMarkers);
+		ReadWriteSetting(ini, "Markers", "bMovableStatic",	a_save, MCM::MSettings()->showMovableStaticMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bMist",			a_save, MCM::MSettings()->showMistMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bLightBeam",		a_save, MCM::MSettings()->showLightBeamMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bOtherMSTT",		a_save, MCM::MSettings()->showOtherMSTTMarkers->GetRef());
 
-		ReadWriteSetting(ini, "Markers", "bStatic",			a_save, MCM::settings::showStaticMarkers);
-		ReadWriteSetting(ini, "Markers", "bX",				a_save, MCM::settings::showXMarkers);
-		ReadWriteSetting(ini, "Markers", "bHeading",		a_save, MCM::settings::showHeadingMarkers);
-		ReadWriteSetting(ini, "Markers", "bDoorTeleport",	a_save, MCM::settings::showDoorTeleportMarkers);
-		ReadWriteSetting(ini, "Markers", "bOtherStatic",	a_save, MCM::settings::showOtherStaticMarkers);
+		ReadWriteSetting(ini, "Markers", "bStatic",			a_save, MCM::MSettings()->showStaticMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bX",				a_save, MCM::MSettings()->showXMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bHeading",		a_save, MCM::MSettings()->showHeadingMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bDoorTeleport",	a_save, MCM::MSettings()->showDoorTeleportMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bOtherStatic",	a_save, MCM::MSettings()->showOtherStaticMarkers->GetRef());
 
-		ReadWriteSetting(ini, "Markers", "bActivator",		a_save, MCM::settings::showActivatorMarkers);
-		ReadWriteSetting(ini, "Markers", "bImpact",			a_save, MCM::settings::showImpactMarkers);
-		ReadWriteSetting(ini, "Markers", "bOtherACTI",		a_save, MCM::settings::showOtherActivatorMarkers);
+		ReadWriteSetting(ini, "Markers", "bActivator",		a_save, MCM::MSettings()->showActivatorMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bImpact",			a_save, MCM::MSettings()->showImpactMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bOtherACTI",		a_save, MCM::MSettings()->showOtherActivatorMarkers->GetRef());
 
-		ReadWriteSetting(ini, "Markers", "bCivilWar",		a_save, MCM::settings::showCWMarkers);
-		ReadWriteSetting(ini, "Markers", "bCWAttacker",		a_save, MCM::settings::showCWAttackerMarkers);
-		ReadWriteSetting(ini, "Markers", "bCWDefender",		a_save, MCM::settings::showCWDefenderMarkers);
-		ReadWriteSetting(ini, "Markers", "bOtherCW",		a_save, MCM::settings::showOtherCWMarkers);
+		ReadWriteSetting(ini, "Markers", "bCivilWar",		a_save, MCM::MSettings()->showCWMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bCWAttacker",		a_save, MCM::MSettings()->showCWAttackerMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bCWDefender",		a_save, MCM::MSettings()->showCWDefenderMarkers->GetRef());
+		ReadWriteSetting(ini, "Markers", "bOtherCW",		a_save, MCM::MSettings()->showOtherCWMarkers->GetRef());
 
 		if (!a_save && a_presetIndex == 0)
 		{
@@ -301,5 +326,55 @@ namespace MCM
 		{
 			ini.SaveFile(fileName.c_str());
 		}
+	}
+
+	void MCM::MarkerSettings::InitShowMarkerSettings()
+	{
+		logger::debug("Initializing marker selection settings");
+
+		AddMarkerGroupSetting("Furniture", "ShowFurnitureButton", showFurnitureMarkers);
+		showFurnitureMarkers->AddChildSetting("Sit",	"ShowSitMarkersButton",		showSitMarkers);
+		showFurnitureMarkers->AddChildSetting("Lean",	"ShowLeanMarkersButton",	showLeanMarkers);
+		showFurnitureMarkers->AddChildSetting("Sleep",	"ShowSleepmarkersButton",	showSleepMarkers);
+
+		AddMarkerGroupSetting("Light bulbs", "ShowLightMarkersButton", showLightMarkers);
+		showLightMarkers->AddChildSetting("Omni",			"ShowOmniLightMarkersButton",		showOmniMarkers);
+		showLightMarkers->AddChildSetting("Shadow omni",	"ShowShadowOmniLightMarkersButton", showShadowOmniMarkers);
+		showLightMarkers->AddChildSetting("Shadow spot",	"ShowShadowSpotLightMarkersButton", showShadowSpotMarkers);
+		showLightMarkers->AddChildSetting("Shadow hemi",	"ShowShadowHemiLightMarkersButton", showShadowHemiMarkers);
+
+		AddMarkerGroupSetting("Misc", "ShowMiscMarkersButton", showMiscMarkers);
+		showMiscMarkers->AddChildSetting("Idle markers",	"ShowIdleMarkersButton",	showIdleMarkers);
+		showMiscMarkers->AddChildSetting("Sound markers",	"ShowSoundMarkersButton",	showSoundMarkers);
+		showMiscMarkers->AddChildSetting("Dragon markers",	"ShowDragonMarkersButton",	showDragonMarkers);
+		showMiscMarkers->AddChildSetting("Cloud markers",	"ShowCloudMarkersButton",	showCloudMarkers);
+		showMiscMarkers->AddChildSetting("Critter markers",	"ShowCritterMarkersButton", showCritterMarkers);
+		showMiscMarkers->AddChildSetting("Flora markers",	"ShowFloraMarkersButton",	showFloraMarkers);
+		showMiscMarkers->AddChildSetting("Hazard markers",	"ShowHazardMarkersButton",	showHazardMarkers);
+
+		AddMarkerGroupSetting("Movable Statics", "ShowMSTTMarkersButton", showMovableStaticMarkers);
+		showMovableStaticMarkers->AddChildSetting("Mist",			"ShowMistMarkersButton",		showMistMarkers);
+		showMovableStaticMarkers->AddChildSetting("Light beams",	"ShowLightBeamMarkersButton",	showLightBeamMarkers);
+		showMovableStaticMarkers->AddChildSetting("Other MSTT",		"ShowOtherMSTTMarkersButton",	showOtherMSTTMarkers);
+
+		AddMarkerGroupSetting("Statics", "ShowStaticMarkersButton", showStaticMarkers);
+		showStaticMarkers->AddChildSetting("X marker",		"ShowXMarkersButton",				showXMarkers);
+		showStaticMarkers->AddChildSetting("Heading",		"ShowHeadingMarkersButton",			showHeadingMarkers);
+		showStaticMarkers->AddChildSetting("Door teleport", "ShowDoorTeleportMarkersButton",	showDoorTeleportMarkers);
+		showStaticMarkers->AddChildSetting("Other statics", "ShowOtherStaticMarkersButton",		showOtherStaticMarkers);
+
+		AddMarkerGroupSetting("Activators", "ShowActivatorMarkersButton", showActivatorMarkers);
+		showActivatorMarkers->AddChildSetting("Impact markers",		"ShowImpactMarkersButton",			showImpactMarkers);
+		showActivatorMarkers->AddChildSetting("Other activators",	"ShowOtherActivatorsMarkersButto",	showOtherActivatorMarkers);
+
+		AddMarkerGroupSetting("Civli War", "ShowCivilWarMarkersButton", showCWMarkers);
+		showCWMarkers->AddChildSetting("Attacker", "ShowCWAttackerMarkersButton",	showCWAttackerMarkers);
+		showCWMarkers->AddChildSetting("Defender", "ShowCWDefenderMarkersButton",	showCWDefenderMarkers);
+		showCWMarkers->AddChildSetting("Other CW", "ShowOtherCWMarkersButton",		showOtherCWMarkers);
+
+		areMarkerSettingsInitialized = true;
+
+		logger::debug("Finished initializing marker selection settings");
+
 	}
 }

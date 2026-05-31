@@ -1,8 +1,7 @@
 #pragma once
 
 #include "DrawHandler.h"
-#include "UIHandler.h"
-#include "OcclusionHandler.h"
+#include "BoxHandler.h"
 #include "CellHandler.h"
 #include "NavmeshHandler.h"
 #include "MarkerHandler.h"
@@ -16,8 +15,7 @@ namespace DebugMenu
 	{
 		public:
 			std::unique_ptr<DrawHandler>			drawHandler;
-			std::unique_ptr<UIHandler>				uiHandler;
-			std::unique_ptr<OcclusionHandler>		occlusionHandler;
+			std::unique_ptr<BoxHandler>				boxHandler;
 			std::unique_ptr<CellHandler>			cellHandler;
 			std::unique_ptr<NavmeshHandler>			navmeshHandler;
 			std::unique_ptr<MarkerHandler>			markerHandler;
@@ -27,11 +25,12 @@ namespace DebugMenu
 			bool isDrawMenuOpen = false;
 			bool isCoordinatesBoxVisible = false;
 			bool hasDebugMenuBeenOpenedBefore = false;
-			bool isDebugMenuClosed = true;
-			
+			bool isDebugMenuActive = false;
+
 			void Init();
 			void CloseAndReset();
 			void Update();
+			void OnDebugMenuUIOpen();
 			void ResetUpdateTimer();
 			void DrawEveryFrame(bool a_isGamePaused);
 			void DrawPeriodically(bool a_isGamePaused);
@@ -54,14 +53,13 @@ namespace DebugMenu
 
 	};
 
-	std::unique_ptr<DebugMenuHandler>&	GetDebugMenuHandler();
-	std::unique_ptr<DrawHandler>&		GetDrawHandler();
-	std::unique_ptr<UIHandler>&			GetUIHandler();
-	std::unique_ptr<OcclusionHandler>&	GetOcclusionHandler();
-	std::unique_ptr<CellHandler>&		GetCellHandler();
-	std::unique_ptr<NavmeshHandler>&	GetNavmeshHandler();
-	std::unique_ptr<MarkerHandler>&		GetMarkerHandler();
-	std::unique_ptr<CollisionHandler>&	GetCollisionHandler();
+	std::unique_ptr<DebugMenuHandler>&		GetDebugMenuHandler();
+	std::unique_ptr<DrawHandler>&			GetDrawHandler();
+	std::unique_ptr<BoxHandler>&			GetBoxHandler();
+	std::unique_ptr<CellHandler>&			GetCellHandler();
+	std::unique_ptr<NavmeshHandler>&		GetNavmeshHandler();
+	std::unique_ptr<MarkerHandler>&			GetMarkerHandler();
+	std::unique_ptr<CollisionHandler>&		GetCollisionHandler();
 	std::unique_ptr<RefInspectorHandler>&	GetRefInspectorHandler();
-	
+		
 }

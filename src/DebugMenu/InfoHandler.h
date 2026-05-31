@@ -13,9 +13,9 @@ namespace DebugMenu
 		public:
 			static std::map<RE::FormID, std::string> soundEditorIDs;
 
-			DrawHandler::MetaDataPtr shapeMetaData;
+			DrawHandler::ShapeMetaData shapeMetaData;
 
-			InfoHandler(DrawHandler::MetaDataPtr& a_shapeMetaData) : shapeMetaData(a_shapeMetaData) {}
+			InfoHandler(DrawHandler::ShapeMetaData& a_shapeMetaData) : shapeMetaData(a_shapeMetaData) {}
 
 			std::string GetInfo();
 
@@ -27,14 +27,18 @@ namespace DebugMenu
 			std::string GetNavmeshInfo();
 			std::string GetNavmeshCoverInfo();
 			std::string GetOcclusionInfo();
+			std::string GetCollisionMarkerInfo();
 			std::string GetRefInfo();
 			std::string GetLightMarkerInfo();
 			std::string GetSoundMarkerInfo();
 
 			// Helper functions
 			std::string	GetCellInfo();
+			std::string GetSourceFilesInfo();
 			std::string GetLandTextureInfo(const RE::TESLandTexture* a_landTexture, uint8_t a_textureIndex, bool a_defaultTexture = false);
-			
+
+			std::string GetCollisionLayerName(RE::COL_LAYER a_layer);
+
 			std::vector<std::string_view> GetSouceFiles(const RE::TESForm* a_form);
 
 	};

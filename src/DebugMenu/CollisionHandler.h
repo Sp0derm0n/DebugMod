@@ -17,7 +17,7 @@ namespace DebugMenu
 			void HideAllCollisions();	
 			void ResetSelectedRefs();
 
-		private:
+		//private:
 			struct CollisionObject
 			{
 				
@@ -62,9 +62,9 @@ namespace DebugMenu
 
 			struct CollisionMesh
 			{
-				CollisionMesh(std::vector<CollisionTriangle>& a_triangles);
-
 				std::shared_ptr<Renderer::MeshDrawer> meshDrawer = nullptr;
+
+				CollisionMesh(std::vector<CollisionTriangle>& a_triangles);
 			};
 
 			class RefCollisionData
@@ -88,6 +88,9 @@ namespace DebugMenu
 					void	MarkForDeletion() { ref = nullptr; }
 					float	GetSquareDistance(const RE::NiPoint3& a_point);
 
+					static std::pair<CollisionTriangle, CollisionTriangle> SquareToTriangles(vec3u& a_point1, vec3u& a_point2, vec3u& a_point3, vec3u& a_point4, vec4u& a_color = MCM::settings::collisionColor);
+
+
 				private:
 					RE::NiPoint3 previousPosition{ 0.0f, 0.0f, 0.0f };
 
@@ -106,7 +109,6 @@ namespace DebugMenu
 					void LoopOverSingleShapeContainer(CollisionObject& a_object, const RE::hkpSingleShapeContainer& a_singleShapeContainer);
 					
 					std::vector<vec3u>								GetCircle(uint32_t a_segments, float a_radius, vec3u& a_unitXVector, vec3u& a_unitYVector, vec3u& a_center);
-					std::pair<CollisionTriangle, CollisionTriangle> SquareToTriangles(vec3u& a_point1, vec3u& a_point2, vec3u& a_point3, vec3u& a_point4, vec4u& a_color = MCM::settings::collisionColor);
 					
 					static std::vector<RE::FormID> refsWithBadConvexHulls;
 			};

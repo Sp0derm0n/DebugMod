@@ -4,6 +4,8 @@
 #include "SKSE/SKSE.h"
 #include "RE.h"
 
+#include <fmt/xchar.h>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 set(NAME "DebugMenu")
-set(VERSION 3.0.1)
+set(VERSION 4.0.0)
 
 # ------- Define project ----------
 
@@ -94,6 +94,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${DETOURS_LIBRARY})
 
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
+
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
 
 if(DEFINED OUTPUT_FOLDER)

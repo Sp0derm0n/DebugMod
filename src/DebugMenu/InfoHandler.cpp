@@ -6,33 +6,37 @@ std::map<RE::FormID, std::string> DebugMenu::InfoHandler::soundEditorIDs;
 
 std::string	DebugMenu::InfoHandler::GetInfo()
 {
-	switch (shapeMetaData->infoType)
+	switch (shapeMetaData.infoType)
 	{
-		case InfoType::kQuad :
+		case InfoType::kQuad:
 		{
 			return GetQuadInfo();
 		}
-		case InfoType::kNavmesh :
+		case InfoType::kNavmesh:
 		{
 			return GetNavmeshInfo();
 		}
-		case InfoType::kNavmeshCover :
+		case InfoType::kNavmeshCover:
 		{
 			return GetNavmeshCoverInfo();
 		}
-		case InfoType::kOcclusion :
+		case InfoType::kOcclusion:
 		{
 			return GetOcclusionInfo();
 		}
-		case InfoType::kRef :
+		case InfoType::kCollisionMarker:
+		{
+			return GetCollisionMarkerInfo();
+		}
+		case InfoType::kRef:
 		{
 			return GetRefInfo();
 		}
-		case InfoType::kLightMarker :
+		case InfoType::kLightMarker:
 		{
 			return GetLightMarkerInfo();
 		}
-		case InfoType::kSoundMarker :
+		case InfoType::kSoundMarker:
 		{
 			return GetSoundMarkerInfo();
 		}
@@ -42,12 +46,12 @@ std::string	DebugMenu::InfoHandler::GetInfo()
 
 RE::FormID DebugMenu::InfoHandler::GetFormID()
 {
-	return shapeMetaData->formID != 0x0 ? shapeMetaData->formID : shapeMetaData->ref ? shapeMetaData->ref->formID : 0;
+	return shapeMetaData.formID != 0x0 ? shapeMetaData.formID : shapeMetaData.ref ? shapeMetaData.ref->formID : 0;
 }
 
 bool DebugMenu::InfoHandler::DoesRefExist(std::string& a_infoStr)
 {
-	if (!shapeMetaData->ref)
+	if (!shapeMetaData.ref)
 	{
 		a_infoStr += "\nERROR: REF NULL!";
 		return false;
@@ -59,8 +63,8 @@ std::string	DebugMenu::InfoHandler::GetCellInfo()
 {
 	std::string infoStr{ "CELL INFO" };
 
-	auto cell = shapeMetaData->cell;
-	auto ref = shapeMetaData->ref;
+	auto cell = shapeMetaData.cell;
+	auto ref = shapeMetaData.ref;
 
 	if (!cell || cell->GetFormID() >> 24 == 0xFF)
 	{
@@ -96,24 +100,29 @@ std::string	DebugMenu::InfoHandler::GetCellInfo()
 	return infoStr;
 }
 
+std::string DebugMenu::InfoHandler::GetSourceFilesInfo()
+{
+	auto infoStr = "\nReferenced by:"s;
+	for (const auto& fileName : GetSouceFiles(shapeMetaData.ref))
+	{
+		infoStr += "\nMod: "s;
+		infoStr += std::string(fileName);
+	}
+	return infoStr;
+}
+
 std::string DebugMenu::InfoHandler::GetQuadInfo()
 {
 	std::string infoStr = GetCellInfo();
 
-	auto cell = shapeMetaData->cell;
-	auto quad = shapeMetaData->quad;
+	auto cell = shapeMetaData.cell;
+	auto quad = shapeMetaData.quad;
 
 	auto& cellLand = cell->GetRuntimeData().cellLand;
 
 	infoStr += "\n\nLANDSCAPE INFO:"s;
 	infoStr += fmt::format("\nForm ID {:08X}", cellLand->formID);
-	infoStr += "\nReferenced by:"s;
-
-	for (const auto& fileName : GetSouceFiles(cellLand))
-	{
-		infoStr += "\nMod: "s;
-		infoStr += std::string(fileName);
-	}
+	infoStr += GetSourceFilesInfo();
 
 	std::string quadLabel = "";
 	switch (quad)
@@ -193,7 +202,7 @@ std::string	DebugMenu::InfoHandler::GetNavmeshInfo()
 {
 	std::string infoStr = GetCellInfo();
 
-	auto cell = shapeMetaData->cell;
+	auto cell = shapeMetaData.cell;
 	auto formID = GetFormID();
 
 	infoStr += "\n\nNAVMESH INFO";
@@ -211,8 +220,8 @@ std::string	DebugMenu::InfoHandler::GetNavmeshInfo()
 
 std::string DebugMenu::InfoHandler::GetNavmeshCoverInfo()
 {
-	uint16_t flags = shapeMetaData->navmeshTraversalFlags;
-	uint8_t coverEdge = shapeMetaData->coverEdge;
+	uint16_t flags = shapeMetaData.navmeshTraversalFlags;
+	uint8_t coverEdge = shapeMetaData.coverEdge;
 	int32_t height = Utils::GetNavmeshCoverHeight(flags, coverEdge);
 	bool left = Utils::GetNavmeshCoverLeft(flags, coverEdge);
 	bool right = Utils::GetNavmeshCoverRight(flags, coverEdge);
@@ -226,7 +235,6 @@ std::string DebugMenu::InfoHandler::GetNavmeshCoverInfo()
 	return infoStr;
 }
 
-
 std::string DebugMenu::InfoHandler::GetOcclusionInfo()
 {
 	std::string infoStr = GetCellInfo();
@@ -234,22 +242,40 @@ std::string DebugMenu::InfoHandler::GetOcclusionInfo()
 	if (!DoesRefExist(infoStr)) return infoStr;
 
 	RE::FormID formID = GetFormID();
-	auto ref = shapeMetaData->ref;
-	bool isDisabled = shapeMetaData->ref->IsDisabled();
-	auto bounds = shapeMetaData->occlusionBounds;
+	auto ref = shapeMetaData.ref;
+	bool isDisabled = shapeMetaData.ref->IsDisabled();
+	auto bounds = shapeMetaData.bounds;
 
 	infoStr += "\n\nPLANEMARKER INFO";
-	if (isDisabled) infoStr += "\n\nPlanemarker currently disabled";
+	if (isDisabled) infoStr += "\nPlanemarker currently disabled";
 	infoStr += fmt::format("\nForm ID: {:08X}", formID);
 	infoStr += fmt::format("\nPosition: {:.0f}, {:.0f}, {:.0f}", ref->GetPositionX(), ref->GetPositionY(), ref->GetPositionZ());
 	infoStr += fmt::format("\nBounds: {:.0f}, {:.0f}, {:.0f}", bounds.x, bounds.y, bounds.z);
 
-	infoStr += std::string("\nReferenced by:");
-	for (const auto& fileName : GetSouceFiles(ref))
-	{
-		infoStr += "\nMod: ";
-		infoStr += std::string(fileName);
-	}
+	infoStr += GetSourceFilesInfo();
+	return infoStr;
+}
+
+std::string DebugMenu::InfoHandler::GetCollisionMarkerInfo()
+{
+	std::string infoStr = GetCellInfo();
+
+	if (!DoesRefExist(infoStr)) return infoStr;
+
+	RE::FormID formID = GetFormID();
+	auto ref = shapeMetaData.ref;
+	bool isDisabled = shapeMetaData.ref->IsDisabled();
+	auto bounds = shapeMetaData.bounds;
+	auto collisionLayer = shapeMetaData.colliisonLayer;
+
+	infoStr += "\n\nCOLLISIONMARKER INFO";
+	if (isDisabled) infoStr += "\nCollisionmarker currently disabled";
+	infoStr += fmt::format("\nForm ID: {:08X}", formID);
+	infoStr += fmt::format("\nCol layer: {}", GetCollisionLayerName(collisionLayer));
+	infoStr += fmt::format("\nPosition: {:.0f}, {:.0f}, {:.0f}", ref->GetPositionX(), ref->GetPositionY(), ref->GetPositionZ());
+	infoStr += fmt::format("\nBounds: {:.0f}, {:.0f}, {:.0f}", bounds.x, bounds.y, bounds.z);
+
+	infoStr += GetSourceFilesInfo();
 	return infoStr;
 }
 
@@ -259,7 +285,7 @@ std::string DebugMenu::InfoHandler::GetRefInfo()
 
 	if (!DoesRefExist(infoStr)) return infoStr;
 
-	auto ref = shapeMetaData->ref;
+	auto ref = shapeMetaData.ref;
 
 	infoStr += "\n\nREFERENCE INFO:"s;
 
@@ -284,11 +310,7 @@ std::string DebugMenu::InfoHandler::GetRefInfo()
 		infoStr += fmt::format("\nCulled? {}", obj->GetAppCulled());
 	}
 
-	for (const auto& fileName : GetSouceFiles(ref))
-	{
-		infoStr += "\nMod: ";
-		infoStr += std::string(fileName);
-	}
+	infoStr += GetSourceFilesInfo();
 
 	return infoStr;
 }
@@ -299,8 +321,8 @@ std::string DebugMenu::InfoHandler::GetLightMarkerInfo()
 
 	if (!DoesRefExist(infoStr)) return infoStr;
 
-	auto cell = shapeMetaData->cell;
-	auto ref = shapeMetaData->ref;
+	auto cell = shapeMetaData.cell;
+	auto ref = shapeMetaData.ref;
 
 	infoStr += "\n\nLIGHT INFO:";
 
@@ -366,13 +388,7 @@ std::string DebugMenu::InfoHandler::GetLightMarkerInfo()
 		infoStr += "\nNo light info available"s;
 	}
 
-	infoStr += std::string("\nReferenced by:");
-
-	for (const auto& fileName : GetSouceFiles(ref))
-	{
-		infoStr += "\nMod: ";
-		infoStr += std::string(fileName);
-	}
+	infoStr += GetSourceFilesInfo();
 	
 	return infoStr;
 }
@@ -383,7 +399,7 @@ std::string DebugMenu::InfoHandler::GetSoundMarkerInfo()
 
 	if (!DoesRefExist(infoStr)) return infoStr;
 
-	auto ref = shapeMetaData->ref;
+	auto ref = shapeMetaData.ref;
 
 	infoStr += "\n\nSOUND INFO:"s;
 	auto sound = ref->GetBaseObject()->As<RE::TESSound>();
@@ -426,14 +442,237 @@ std::string DebugMenu::InfoHandler::GetSoundMarkerInfo()
 		infoStr += "\nNo sound info available"s;
 	}
 
-	infoStr += std::string("\nReferenced by:");
-	for (const auto& fileName : GetSouceFiles(ref))
-	{
-		infoStr += "\nMod: ";
-		infoStr += std::string(fileName);
-	}
+	infoStr += GetSourceFilesInfo();
 
 	return infoStr;
+}
+
+std::string DebugMenu::InfoHandler::GetCollisionLayerName(RE::COL_LAYER a_layer)
+{
+	logger::info("layer: {}", static_cast<int>(a_layer));
+	switch (a_layer)
+	{
+		case RE::COL_LAYER::kStatic:
+		{
+			return "Static"s;
+		}
+		case RE::COL_LAYER::kAnimStatic:
+		{
+			return "AnimStatic"s;
+		}
+		case RE::COL_LAYER::kTransparent:
+		{
+			return "Transparent"s;
+		}
+		case RE::COL_LAYER::kClutter:
+		{
+			return "Clutter"s;
+		}
+		case RE::COL_LAYER::kWeapon:
+		{
+			return "Weapon"s;
+		}
+		case RE::COL_LAYER::kProjectile:
+		{
+			return "Projectile"s;
+		}
+		case RE::COL_LAYER::kSpell:
+		{
+			return "Spell"s;
+		}
+		case RE::COL_LAYER::kBiped:
+		{
+			return "Biped"s;
+		}
+		case RE::COL_LAYER::kTrees:
+		{
+			return "Trees"s;
+		}
+		case RE::COL_LAYER::kProps:
+		{
+			return "Props"s;
+		}
+		case RE::COL_LAYER::kWater:
+		{
+			return "Water"s;
+		}
+		case RE::COL_LAYER::kTrigger:
+		{
+			return "Trigger"s;
+		}
+		case RE::COL_LAYER::kTerrain:
+		{
+			return "Terrain"s;
+		}
+		case RE::COL_LAYER::kTrap:
+		{
+			return "Trap"s;
+		}
+		case RE::COL_LAYER::kNonCollidable:
+		{
+			return "NonCollidable"s;
+		}
+		case RE::COL_LAYER::kCloudTrap:
+		{
+			return "CloudTrap"s;
+		}
+		case RE::COL_LAYER::kGround:
+		{
+			return "Ground"s;
+		}
+		case RE::COL_LAYER::kPortal:
+		{
+			return "Portal"s;
+		}
+		case RE::COL_LAYER::kDebrisSmall:
+		{
+			return "DebrisSmall"s;
+		}
+		case RE::COL_LAYER::kDebrisLarge:
+		{
+			return "DebrisLarge"s;
+		}
+		case RE::COL_LAYER::kAcousticSpace:
+		{
+			return "AcousticSpace"s;
+		}
+		case RE::COL_LAYER::kActorZone:
+		{
+			return "ActorZone"s;
+		}
+		case RE::COL_LAYER::kProjectileZone:
+		{
+			return "ProjectileZone"s;
+		}
+		case RE::COL_LAYER::kGasTrap:
+		{
+			return "GasTrap"s;
+		}
+		case RE::COL_LAYER::kShellCasting:
+		{
+			return "ShellCasting"s;
+		}
+		case RE::COL_LAYER::kTransparentSmall:
+		{
+			return "TransparentSmall"s;
+		}
+		case RE::COL_LAYER::kInvisibleWall:
+		{
+			return "InvisibleWall"s;
+		}
+		case RE::COL_LAYER::kTransparentSmallAnim:
+		{
+			return "TransparentSmallAnim"s;
+		}
+		case RE::COL_LAYER::kWard:
+		{
+			return "Ward"s;
+		}
+		case RE::COL_LAYER::kCharController:
+		{
+			return "CharController"s;
+		}
+		case RE::COL_LAYER::kStairHelper:
+		{
+			return "StairHelper"s;
+		}
+		case RE::COL_LAYER::kDeadBip:
+		{
+			return "DeadBip"s;
+		}
+		case RE::COL_LAYER::kBipedNoCC:
+		{
+			return "BipedNoCC"s;
+		}
+		case RE::COL_LAYER::kAvoidBox:
+		{
+			return "AvoidBox"s;
+		}
+		case RE::COL_LAYER::kCollisionBox:
+		{
+			return "CollisionBox"s;
+		}
+		case RE::COL_LAYER::kCameraSphere:
+		{
+			return "CameraSphere"s;
+		}
+		case RE::COL_LAYER::kDoorDetection:
+		{
+			return "DoorDetection"s;
+		}
+		case RE::COL_LAYER::kConeProjectile:
+		{
+			return "ConeProjectile"s;
+		}
+		case RE::COL_LAYER::kCameraPick:
+		{
+			return "CameraPick"s;
+		}
+		case RE::COL_LAYER::kItemPick:
+		{
+			return "ItemPick"s;
+		}
+		case RE::COL_LAYER::kLOS:
+		{
+			return "LOS"s;
+		}
+		case RE::COL_LAYER::kPathPick:
+		{
+			return "PathPick"s;
+		}
+		case RE::COL_LAYER::kCustomPick1:
+		{
+			return "CustomPick1"s;
+		}
+		case RE::COL_LAYER::kCustomPick2:
+		{
+			return "CustomPick2"s;
+		}
+		case RE::COL_LAYER::kSpellExplosion:
+		{
+			return "SpellExplosion"s;
+		}
+		case RE::COL_LAYER::kDroppingPick:
+		{
+			return "DroppingPick"s;
+		}
+		//case RE::COL_LAYER::kUnused1:
+		//{
+		//	return "Unused1"s;
+		//}
+		//case RE::COL_LAYER::kUnused2:
+		//{
+		//	return "Unused2"s;
+		//}
+		case RE::COL_LAYER::kUnused3:
+		{
+			return "NavCut"s;
+		}
+		//case RE::COL_LAYER::kUnused4:
+		//{
+		//	return "Unused4"s;
+		//}
+		//case RE::COL_LAYER::kUnused5:
+		//{
+		//	return "Unused5"s;
+		//}
+		//case RE::COL_LAYER::kUnused6:
+		//{
+		//	return "Unused6"s;
+		//}
+		//case RE::COL_LAYER::kUnused7:
+		//{
+		//	return "Unused7"s;
+		//}
+		case RE::COL_LAYER::kInvalid:
+		{
+			return "Invalid"s;
+		}
+		default:
+		{
+			return "Unidentified";
+		}
+	}
 }
 
 

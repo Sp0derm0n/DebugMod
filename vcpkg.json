@@ -14,6 +14,7 @@
     "catch2",
     "polyhook2",
     "detours",
-    "glm"
+    "glm",
+    "nlohmann-json"
   ]
 }

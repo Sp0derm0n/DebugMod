@@ -23,7 +23,7 @@ namespace DebugMenu
 		{
 			if (auto shape = model->AsNode()->GetObjectByName(a_shapeName))
 			{
-				if (auto shaderProperty = netimmerse_cast<RE::BSEffectShaderProperty*>(shape->AsGeometry()->GetGeometryRuntimeData().properties[RE::BSGeometry::States::kEffect].get()))
+				if (auto shaderProperty = netimmerse_cast<RE::BSEffectShaderProperty*>(shape->AsGeometry()->GetGeometryRuntimeData().shaderProperty.get()))
 				{
 					// inspired by https://github.com/powerof3/LightPlacer/blob/830e15d7e5fa1fbccb7427852024458564eccc0b/src/LightData.cpp#L396
 					if (const auto shaderMaterial = static_cast<RE::BSEffectShaderMaterial*>(shaderProperty->material))
@@ -259,25 +259,25 @@ namespace DebugMenu
 			{
 				case RE::FormType::Furniture:
 				{
-					if (MCM::settings::GetShowFurnitureMarkers())
+					if (MCM::MSettings()->showFurnitureMarkers->IsEnabled())
 						ShowFurnitureMarker(a_ref);
 					break;
 				}
 				case RE::FormType::Light:
 				{
-					if (MCM::settings::GetShowLightMarkers())
+					if (MCM::MSettings()->showLightMarkers->IsEnabled())
 						ShowLightMarker(a_ref);
 					break;
 				}
 				case RE::FormType::Sound:
 				{
-					if (MCM::settings::GetShowSoundMarkers())
+					if (MCM::MSettings()->showSoundMarkers->IsEnabled())
 						ShowSoundMarker(a_ref);
 					break;
 				}
 				case RE::FormType::Door:
 				{
-					if (MCM::settings::GetShowDoorTeleportMarkers())
+					if (MCM::MSettings()->showDoorTeleportMarkers->IsEnabled())
 						ShowDoorTeleportMarker(a_ref);
 					break;
 				}
@@ -477,19 +477,19 @@ namespace DebugMenu
 			{
 				RE::TESObjectSTAT* markerStatic = nullptr;
 
-				if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kSit) && MCM::settings::GetShowSitMarkers())
+				if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kSit) && MCM::MSettings()->showSitMarkers->IsEnabled())
 				{
 					markerStatic = RE::TESForm::LookupByID<RE::TESObjectSTAT>(0x64);
 					markerType |= 0b001;
 				}
 
-				else if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kSleep) && MCM::settings::GetShowSleepMarkers())
+				else if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kSleep) && MCM::MSettings()->showSleepMarkers->IsEnabled())
 				{
 					markerStatic = RE::TESForm::LookupByID<RE::TESObjectSTAT>(0x65);
 					markerType |= 0b010;
 				}
 
-				else if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kLean) && MCM::settings::GetShowLeanMarkers())
+				else if (marker.animationType.any(RE::BSFurnitureMarker::AnimationType::kLean) && MCM::MSettings()->showLeanMarkers->IsEnabled())
 				{
 					markerStatic = RE::TESForm::LookupByID<RE::TESObjectSTAT>(0x66);
 					markerType |= 0b100;
@@ -639,25 +639,25 @@ namespace DebugMenu
 		{
 			if (light->data.flags.any(RE::TES_LIGHT_FLAGS::kHemiShadow)) // WhiterunDragonreachBasement
 			{
-				if (!MCM::settings::GetShowShadowHemiMarkers()) return;
+				if (!MCM::MSettings()->showShadowHemiMarkers->IsEnabled()) return;
 				modelName = "marker_halfomni.nif";
 				shapeName = "marker_halfomni:0";
 			}
 			else if (light->data.flags.any(RE::TES_LIGHT_FLAGS::kSpotShadow)) // PotemasCatacombs02
 			{
-				if (!MCM::settings::GetShowShadowSpotMarkers()) return;
+				if (!MCM::MSettings()->showShadowSpotMarkers->IsEnabled()) return;
 				modelName = "marker_spotlight.nif";
 				shapeName = "marker_spotlight:0";
 			}
 			else if (light->data.flags.any(RE::TES_LIGHT_FLAGS::kOmniShadow))
 			{
-				if (!MCM::settings::GetShowShadowOmniMarkers()) return;
+				if (!MCM::MSettings()->showShadowOmniMarkers->IsEnabled()) return;
 				modelName = "marker_lightshadow.nif";
 				shapeName = "marker_lightshadow:0";
 			}
 			else
 			{
-				if (!MCM::settings::GetShowOmniMarkers()) return;
+				if (!MCM::MSettings()->showOmniMarkers->IsEnabled()) return;
 				modelName = "marker_light.nif";
 				shapeName = "marker_light:0";
 			}
@@ -667,10 +667,10 @@ namespace DebugMenu
 		{
 			auto infoPosition = a_ref->GetPosition();
 			
-			auto metaData = CreateMetaData();
-			metaData->cell = a_ref->parentCell;
-			metaData->ref = a_ref;
-			metaData->infoType = InfoType::kLightMarker;
+			DrawHandler::ShapeMetaData metaData;
+			metaData.cell = a_ref->parentCell;
+			metaData.ref = a_ref;
+			metaData.infoType = InfoType::kLightMarker;
 			GetDrawHandler()->DrawPoint(infoPosition, 20.0f, MCM::settings::lightBulbInfoColor, MCM::settings::markerInfoAlpha, metaData);
 		}
 
@@ -690,7 +690,7 @@ namespace DebugMenu
 
 		if (auto shape = markerModel->AsNode()->GetObjectByName(shapeName))
 		{
-			if (auto shaderProperty = netimmerse_cast<RE::BSEffectShaderProperty*>(shape->AsGeometry()->GetGeometryRuntimeData().properties[RE::BSGeometry::States::kEffect].get()))
+			if (auto shaderProperty = netimmerse_cast<RE::BSEffectShaderProperty*>(shape->AsGeometry()->GetGeometryRuntimeData().shaderProperty.get()))
 			{
 				if (lightBulbMaterial)
 				{
@@ -704,7 +704,7 @@ namespace DebugMenu
 			}
 			if (MCM::settings::lightBulbAplha > 99.5f && lightBulbMaterial)
 			{
-				if (auto alphaProperty = netimmerse_cast<RE::NiAlphaProperty*>(shape->AsGeometry()->GetGeometryRuntimeData().properties[RE::BSGeometry::States::kProperty].get()))
+				if (auto alphaProperty = shape->AsGeometry()->GetGeometryRuntimeData().alphaProperty.get())
 				{
 					alphaProperty->SetAlphaBlending(false);
 					alphaProperty->SetAlphaTesting(true);
@@ -720,10 +720,10 @@ namespace DebugMenu
 		{
 			auto pos = a_ref->GetPosition();
 
-			auto metaData = CreateMetaData();
-			metaData->cell = a_ref->parentCell;
-			metaData->ref = a_ref;
-			metaData->infoType = InfoType::kSoundMarker;
+			DrawHandler::ShapeMetaData metaData;
+			metaData.cell = a_ref->parentCell;
+			metaData.ref = a_ref;
+			metaData.infoType = InfoType::kSoundMarker;
 			GetDrawHandler()->DrawPoint(pos, 20.0f, MCM::settings::soundMarkerInfoColor, MCM::settings::markerInfoAlpha, metaData);
 		}
 
@@ -775,28 +775,28 @@ namespace DebugMenu
 			case 0xC4: // WaterCurrentZoneMarker
 			case 0x1C035: // ComplexSceneMARKER
 			case 0xF077B: // RoadMarker
-				return MCM::settings::GetShowOtherStaticMarkers();
+				return MCM::MSettings()->showOtherActivatorMarkers->IsEnabled();
 			case 0x32: // COCHeadingMarker
 			case 0x34: // HeadingMarker
-				return MCM::settings::GetShowHeadingMarkers();
+				return MCM::MSettings()->showHeadingMarkers->IsEnabled();;
 			case 0x3B: // XMarker
-				return MCM::settings::GetShowXMarkers();
+				return MCM::MSettings()->showXMarkers->IsEnabled();
 			case 0x1E595:  // DragonPerchTower
 			case 0x7A37D:	// MQ104FortMeetSoldier4Marker
 			case 0xAA934:  // DragonPerchRockL02
 			case 0xBFB04:  // SoldierWallIdle
 			case 0x103442: // CartFurnitureDriver
 			case 0x105D4D: // CartFurnitureHorse
-				return MCM::settings::GetShowSitMarkers(); // || MCM::settings::GetShowDragonMarkers() // complicated, sinces the dragons are furniture
+				return MCM::MSettings()->showSitMarkers->IsEnabled(); // || MCM::settings::GetShowDragonMarkers() // complicated, sinces the dragons are furniture
 			case 0x52FF5: // WallLeanMarker
-				return MCM::settings::GetShowLeanMarkers();
+				return MCM::MSettings()->showLeanMarkers->IsEnabled();
 			case 0x138C0: // DragonMarker
-				return MCM::settings::GetShowDragonMarkers();
+				return MCM::MSettings()->showDragonMarkers->IsEnabled();
 			case 0x3DF55: // DragonMarkerCrashStrip
 				a_showWhenFar = true;
-				return MCM::settings::GetShowDragonMarkers();
+				return MCM::MSettings()->showDragonMarkers->IsEnabled();
 			case 0x68E43: // DragonMoundBaseAlt
-				return MCM::settings::GetShowOtherActivatorMarkers() || MCM::settings::GetShowDragonMarkers();
+				return MCM::MSettings()->showOtherActivatorMarkers->IsEnabled() || MCM::MSettings()->showDragonMarkers->IsEnabled();
 			case 0x22201: // CritterLandingMarker_Small
 			case 0x6B2FF: // critterSpawnPond_Shallow
 			case 0x6B44D: // critterSpawnPond_Deep
@@ -806,18 +806,18 @@ namespace DebugMenu
 			case 0xC51FF: // critterSpawnInsects_Few
 			case 0xC5208: // critterSpawnInsects_Single
 			case 0xC5209: // critterSpawnInsects_Many
-				return MCM::settings::GetShowCritterMarkers();
+				return MCM::MSettings()->showCritterMarkers->IsEnabled();
 			case 0x7776E: // FXMistLow01LongHalfVis
 			case 0x7776F: // FXMistLow01Long
 			case 0x77770: // FXMistLow02Rnd
 			case 0x77771: // FXMistLow02RndHalfVis
 			case 0x77772: // FXMistLow01
 			case 0x77773: // FXMistLow01HalfVis
-				return MCM::settings::GetShowMistMarkers();
+				return MCM::MSettings()->showMistMarkers->IsEnabled();
 			case 0x75DCB: // FXAmbBeamXbDustBig02
 			case 0xAA8F5: // FXAmbBeamSlowFogBrt02
 			case 0xAA8F6: // FXAmbBeamSlowFogBrt01
-				return MCM::settings::GetShowLightBeamMarkers();
+				return MCM::MSettings()->showLightBeamMarkers->IsEnabled();
 			case 0x16D4B: // FXSteamCrack
 			case 0x1ACAC: // FXWaterFallSkirtSlope
 			case 0x2BCA5: // FXSplashSmallParticles
@@ -839,17 +839,17 @@ namespace DebugMenu
 			case 0xB09ED: // FXSmokeChimney02
 			case 0xE4E22: // FXDweSteam01
 			case 0x108E37: // FXAmbWaterSalmon018
-				return MCM::settings::GetShowOtherMSTTMarkers();
+				return MCM::MSettings()->showOtherMSTTMarkers->IsEnabled();
 			case 0x57A8C: // FireLgPlacedHazard
-				return MCM::settings::GetShowHazardMarkers();
+				return MCM::MSettings()->showHazardMarkers->IsEnabled();
 			case 0x80C32: // ImpactMarker01
-				return MCM::settings::GetShowImpactMarkers();
+				return MCM::MSettings()->showImpactMarkers->IsEnabled();
 				//case 0x1B37D : // FXRapids
 			case 0x21513: // NorLever01
 			case 0x27EF9: // GuardMarker
 			case 0x812C6: // FireWeaponMarker
 			case 0x10B035: // FCAmbWaterfallSalmon01
-				return MCM::settings::GetShowOtherActivatorMarkers();
+				return MCM::MSettings()->showOtherActivatorMarkers->IsEnabled();
 			case 0x2630D: // SkyrimCloudDistant01
 			case 0x274B7: // SkyrimCloudDistant01_25
 			case 0x274B8: // SkyrimCloudDistant01_50
@@ -995,7 +995,7 @@ namespace DebugMenu
 			case 0x10C48B: // INV_SkyrimCloudShape06_O_25
 			case 0x10C4D2: // INV_SkyrimCloudShape06_O_50
 				a_showWhenFar = true;
-				return MCM::settings::GetShowCloudMarkers();
+				return MCM::MSettings()->showCloudMarkers->IsEnabled();
 			case 0x3040C: // CW1MeleeCloseAttacker
 			case 0x3040E: // CW1MeleeWideAttacker
 			case 0x3041E: // CW1MissileCloseAttacker
@@ -1021,7 +1021,7 @@ namespace DebugMenu
 			case 0x30426: // CW5MissileCloseAttacker
 			case 0x30427: // CW5MissileWideAttacker
 			case 0x30408: // CW5SpawnAttacker
-				return MCM::settings::GetShowCWAttackerMarkers();
+				return MCM::MSettings()->showCWAttackerMarkers->IsEnabled();
 			case 0x30428: // CW1MeleeCloseDefender
 			case 0x30429: // CW1MeleeWideDefender
 			case 0x30432: // CW1MissileCloseDefender
@@ -1047,22 +1047,23 @@ namespace DebugMenu
 			case 0x3043F: // CW5MissileCloseDefender
 			case 0x30440: // CW5MissileWideDefender
 			case 0x3041D: // CW5SpawnDefender
-				return MCM::settings::GetShowCWDefenderMarkers();
+				return MCM::MSettings()->showCWDefenderMarkers->IsEnabled();
 			case 0x41B2D: // CWSiegeSonsSoldier
 			case 0x41B2E: // CWSiegeImperialSoldier
 			case 0x4B77C: // CWTower01
 			case 0xDEEC6: // CWTowerWall01
 			case 0xE108E: // CWSoldierImperialUseCatapult (NPC, so doesnt work yet)
-				return MCM::settings::GetShowOtherCWMarkers();
+				return MCM::MSettings()->showOtherCWMarkers->IsEnabled();
 			case 0x69811: // ShadowMarkFenceWood01
 			case 0x69813: // ShadowMarkLootWood01 // debug this
-				return MCM::settings::GetShowTextureSetMarkers();
+				return false;
+				//return MCM::MSettings()->showTextureSetMarkers->IsEnabled();
 		}
 
 		switch (baseObject->GetFormType())
 		{
 			case RE::FormType::IdleMarker:
-				return MCM::settings::GetShowIdleMarkers();
+				return MCM::MSettings()->showIdleMarkers->IsEnabled();
 
 		}
 

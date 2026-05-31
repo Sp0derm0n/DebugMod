@@ -79,4 +79,14 @@ class InfoBox extends MovieClip
 			scrollUp._visible = false;
 		}
 	}
+	
+	public function GetX():Number
+	{
+		return this._x + this.getBounds().xMin;
+	}
+	
+	public function GetY():Number
+	{
+		return this._y + this.getBounds().yMin;
+	}
 }

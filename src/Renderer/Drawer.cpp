@@ -163,14 +163,18 @@ namespace Renderer
             cbufPerFrame->Bind(PipelineStage::Vertex, 1, a_ctx);
             cbufPerFrame->Bind(PipelineStage::Fragment, 1, a_ctx);
 
-			Renderer::SetRasterState(a_ctx, D3D11_FILL_MODE::D3D11_FILL_WIREFRAME, 
+		/*	Renderer::SetRasterState(a_ctx, D3D11_FILL_MODE::D3D11_FILL_WIREFRAME, 
+									D3D11_CULL_MODE::D3D11_CULL_NONE, true, -2000, 0.0f, 0.0f, true,
+									false, false, false);*/
+
+			Renderer::SetRasterState(a_ctx, D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,
 									D3D11_CULL_MODE::D3D11_CULL_NONE, true, -2000, 0.0f, 0.0f, true,
 									false, false, false);
 				
 			if (MCM::settings::collisionOcclude)
 				Renderer::SetDepthState(a_ctx, true, true, D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL);
 			
-			// linelist and meshlist is cleared in drawhandler ClearAll() called in DebubMenu.cpp
+			// linelist and meshlist are cleared in drawhandler ClearAll() called in DebubMenu.cpp
             lineDrawer->Submit(lineList);
 			for (auto& mesh : meshList)
 			{

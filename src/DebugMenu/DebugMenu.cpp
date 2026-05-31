@@ -1,5 +1,7 @@
 #include "DebugMenu.h"
 #include "MCM.h"
+#include "Interface/UIHandler.h"
+#include "FreeCamHandler.h"
 
 namespace DebugMenu
 {
@@ -8,8 +10,7 @@ namespace DebugMenu
 	std::unique_ptr<DebugMenuHandler>& GetDebugMenuHandler() { return debugMenuHandler; }
 
 	std::unique_ptr<DrawHandler>& GetDrawHandler() { return debugMenuHandler->drawHandler; }
-	std::unique_ptr<UIHandler>& GetUIHandler() { return debugMenuHandler->uiHandler; }
-	std::unique_ptr<OcclusionHandler>& GetOcclusionHandler() { return debugMenuHandler->occlusionHandler; }
+	std::unique_ptr<BoxHandler>& GetBoxHandler() { return debugMenuHandler->boxHandler; }
 	std::unique_ptr<CellHandler>& GetCellHandler() { return debugMenuHandler->cellHandler; }
 	std::unique_ptr<NavmeshHandler>& GetNavmeshHandler() { return debugMenuHandler->navmeshHandler; }
 	std::unique_ptr<MarkerHandler>& GetMarkerHandler() { return debugMenuHandler->markerHandler; }
@@ -19,9 +20,8 @@ namespace DebugMenu
 	void DebugMenuHandler::Init()
 	{
 		drawHandler = std::make_unique<DrawHandler>();
-		uiHandler = std::make_unique<UIHandler>();
 
-		occlusionHandler = std::make_unique<OcclusionHandler>();
+		boxHandler = std::make_unique<BoxHandler>();
 		cellHandler = std::make_unique<CellHandler>();
 		navmeshHandler = std::make_unique<NavmeshHandler>();
 		markerHandler = std::make_unique<MarkerHandler>();
@@ -35,25 +35,44 @@ namespace DebugMenu
 
 	void DebugMenuHandler::CloseAndReset()
 	{
-		isDebugMenuClosed = true;
 		markerHandler->Reset();
 		collisionHandler->Reset();
-		DrawMenu::CloseMenu();
-		DebugMenuUI::CloseMenu();
+		if (FreeCamHandler::GetSingleton()->IsCustomFreeCamEnabled()) FreeCamHandler::GetSingleton()->ToggleTFC();
+		//DrawMenu::CloseMenu();
+		ScaleformUI::UIHandler::GetSingleton()->drawMenu->Close();
+		ScaleformUI::UIHandler::GetSingleton()->debugMenuUI->Close();
+
+		isDebugMenuActive = false; // must be sat false after freecam is toggled
+
+
+	}
+
+	void DebugMenuHandler::OnDebugMenuUIOpen()
+	{
+		isDebugMenuActive = true; // Must be sat true before freecam is toggled
+
+		if (!hasDebugMenuBeenOpenedBefore)
+		{
+			hasDebugMenuBeenOpenedBefore = true;
+			MCM::DebugMenuMCM::ReadSettings(true);
+
+			if (MCM::settings::enableFreeCamOnOpen)
+			{
+				if (const auto& playerCamera = RE::PlayerCamera::GetSingleton())
+				{					
+					// switch into custom free cam if tfc is active before menu was opened
+					if (playerCamera->IsInFreeCameraMode()) FreeCamHandler::GetSingleton()->ToggleTFC();
+				}
+				FreeCamHandler::GetSingleton()->ToggleTFC();
+			}
+		}
 	}
 
 	void DebugMenuHandler::Update()
 	{
 		if (!Utils::IsPlayerLoaded()) return;
 
-		if (uiHandler && uiHandler->isMenuOpen)
-		{
-			uiHandler->Update();
-		}
-
-		// Must come after uiHandler update
-		if (isDebugMenuClosed) return;
-
+		if (!hasDebugMenuBeenOpenedBefore || !isDebugMenuActive) return;
 
 		bool isGamePaused = RE::UI::GetSingleton()->GameIsPaused();
 
@@ -68,16 +87,14 @@ namespace DebugMenu
 				drawHandler->alphaMultiplier = GetLightLevel();
 				DrawPeriodically(isGamePaused);
 			}
-			drawHandler->Update(*deltaTime);
 			DrawEveryFrame(isGamePaused);
+			drawHandler->Update(*deltaTime);
 
 		}
-
-
-		//if (isGamePaused) return;
-		
+	
 		// has to be lowest in this function
-		if (drawHandler && drawHandler->isMenuOpen == false)
+		//if (drawHandler && drawHandler->isMenuOpen == false)
+		if (ScaleformUI::UIHandler::GetSingleton()->drawMenu->IsClosed())
 		{
 			if (isAnyDebugON())
 				OpenDrawMenu();
@@ -117,7 +134,7 @@ namespace DebugMenu
 		if (!a_isGamePaused)
 		{
 			drawHandler->ClearScaleform();
-			occlusionHandler->Draw();
+			boxHandler->Draw();
 			cellHandler->Draw();
 			navmeshHandler->Draw();
 			markerHandler->Draw();
@@ -158,17 +175,13 @@ namespace DebugMenu
 
 	void DebugMenuHandler::OpenDrawMenu()
 	{
-		DrawMenu::OpenMenu();
-		auto uiTask = [&]()
-		{
-			drawHandler->Init();
-		};
-		SKSE::GetTaskInterface()->AddUITask(uiTask);
+		ScaleformUI::GetDrawMenu()->Open();
+		drawHandler->Init();
 	}
 
 	void DebugMenuHandler::CloseDrawMenu()
 	{
-		DrawMenu::CloseMenu();
+		ScaleformUI::GetDrawMenu()->Close();
 		drawHandler->ClearScaleform();
 		drawHandler->ClearD3D11();
 		drawHandler->g_DrawMenu = nullptr;
@@ -187,22 +200,19 @@ namespace DebugMenu
 
 	void DebugMenuHandler::ShowCoordinates()
 	{
-		if (!drawHandler->isMenuOpen) return;// should only try to open the coordinatebox whe the drawMenu is open
-
-		if (MCM::settings::showCoordinates)
+		if (ScaleformUI::GetDrawMenu()->IsOpen())
 		{
-			if (!isCoordinatesBoxVisible)
+			if (MCM::settings::showCoordinates)
 			{
-				drawHandler->g_DrawMenu->ShowBox("coordinatesBox");
-				isCoordinatesBoxVisible = true;
+				ScaleformUI::UIHandler::GetSingleton()->ShowOverlayIfItsHidden();
+				auto playerPosition = RE::PlayerCharacter::GetSingleton()->GetPosition();
+				if (FreeCamHandler::GetSingleton()->IsCustomFreeCamEnabled())
+				{
+					RE::PlayerCamera::GetSingleton()->currentState->GetTranslation(playerPosition);
+				}
+				ScaleformUI::UIHandler::GetSingleton()->SetOverlayPosition(playerPosition.x, playerPosition.y, playerPosition.z);
 			}
-			RE::NiPoint3 playerPosition = RE::PlayerCharacter::GetSingleton()->GetPosition();
-			drawHandler->g_DrawMenu->SetCoordinates(playerPosition.x, playerPosition.y, playerPosition.z);
-		}
-		else if (isCoordinatesBoxVisible)
-		{
-			drawHandler->g_DrawMenu->HideBox("coordinatesBox");
-			isCoordinatesBoxVisible = false;
+			else ScaleformUI::UIHandler::GetSingleton()->HideOverlayIfItsVisible();
 		}
 	}
 
@@ -211,15 +221,15 @@ namespace DebugMenu
 		float nightMultiplier = 0.5;
 		switch (MCM::settings::dayNightIndex)
 		{
-			case 0: //day mode
+			case MCM::settings::LightMode::day: //day mode
 			{
 				return 1;
 			}
-			case 1: // night mode
+			case MCM::settings::LightMode::night: // night mode
 			{
 				return nightMultiplier;
 			}
-			case 2:
+			case MCM::settings::LightMode::autoMode:
 			{
 				// should be accurate for at least 100000000000 days
 				float gameTime = RE::Calendar::GetSingleton()->GetCurrentGameTime(); // 0, 1, 2, ... at midnight, 0.5, 1.5, ... at noon

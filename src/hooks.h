@@ -2,6 +2,7 @@
 
 #include "DebugMenu/DebugMenu.h"
 #include "MCM.h"
+#include "FreeCamHandler.h"
 
 namespace Hooks
 {
@@ -23,34 +24,10 @@ namespace Hooks
 			}
 			static inline REL::Relocation<decltype(Update)> _Update;
 	};
-
-	// not in use
-	class Hook_MainUpdate
-	{
-		public:
-			static void Install()
-			{
-				logger::debug("Hook: MainUpdate");
-
-				auto& trampoline = SKSE::GetTrampoline();
-				REL::Relocation<uintptr_t> hook{ RELOCATION_ID(35551, 36544), REL::VariantOffset(0x11F, 0x160, 0x160) };  // main loop
-				_Update = trampoline.write_call<5>(hook.address(), Update);
-
-			}
-
-		private:
-			static void Update(RE::Main* a_this, float a_2)
-			{
-				_Update(a_this, a_2);
-
-				if (MCM::settings::modActive)
-				{
-					DebugMenu::GetDebugMenuHandler()->Update();
-				}
-			}
-			static inline REL::Relocation<decltype(Update)> _Update;
-	};
-
+	
+	// move speed
+	//RE::NiPoint3 prePos;
+	//float* deltaTime = (float*)RELOCATION_ID(523660, 410199).address();
 	// post player_update update
 	class Hook_MainUpdate_sub_140437D40
 	{
@@ -64,6 +41,9 @@ namespace Hooks
 				_Update = trampoline.write_call<5>(hook.address(), Update);
 			}
 		private:
+
+			
+
 			static void Update(RE::BSTreeManager* a_treeManager, RE::BSGeometryListCullingProcess* a_cullingProcess, bool a_a3)
 			{
 				_Update(a_treeManager, a_cullingProcess, a_a3);
@@ -72,6 +52,23 @@ namespace Hooks
 				{
 					DebugMenu::GetDebugMenuHandler()->Update();
 				}
+
+				// Move speed
+				//if (auto playerCam = RE::PlayerCamera::GetSingleton())
+				//{
+				//	if (auto freeCamState = playerCam->GetRuntimeData().cameraStates[RE::CameraState::kFree])
+				//	{
+				//		if (auto freeCam = FreeCamHandler::GetSingleton()->GetFreeCamera())
+				//		{
+				//			auto pos = freeCam->translation;
+				//			auto delta = pos - prePos;
+				//			auto speed = delta / 70 / *deltaTime;
+				//			prePos = pos;
+				//			logger::debug("free cam speed: {}", speed.Length());
+				//		}
+				//	}
+				//}
+
 			}
 			static inline REL::Relocation<decltype(Update)> _Update;
 	};
@@ -87,14 +84,15 @@ namespace Hooks
 
 			}
 		private:
-			static void Load(RE::TESObjectCELL* a_cell, RE::TESFile* a_mod)
+			static bool Load(RE::TESObjectCELL* a_cell, RE::TESFile* a_mod)
 			{
-				_Load(a_cell, a_mod);
+				bool result = _Load(a_cell, a_mod);
 
 				if (MCM::settings::modActive)
 				{
 					DebugMenu::GetNavmeshHandler()->OnCellLoad(a_cell);
 				}
+				return result;
 			}
 			static inline REL::Relocation<decltype(Load)> _Load;
 	};
@@ -113,6 +111,7 @@ namespace Hooks
 			static bool Load(RE::NavMesh* a_navmesh, RE::TESFile* a_mod)
 			{
 				bool result = _Load(a_navmesh, a_mod);
+				
 
 				if (MCM::settings::modActive && MCM::settings::showMoreNavmeshSourcefiles)
 				{
@@ -123,28 +122,41 @@ namespace Hooks
 			static inline REL::Relocation<decltype(Load)> _Load;
 	};
 
+	class Hook_LandLoad
+	{
+		public:
+		static void install()
+		{
+			REL::Relocation<std::uintptr_t> LandVtbl{ RE::VTABLE_TESObjectLAND[0] };
+			_Load = LandVtbl.write_vfunc(0x6, Load);
+			logger::debug("hook: LandLoad");
+
+		}
+		private:
+		static bool Load(RE::TESObjectLAND* a_land, RE::TESFile* a_mod)
+		{
+			bool result = _Load(a_land, a_mod);
+
+			if (MCM::settings::modActive)
+			{
+				DebugMenu::GetCellHandler()->OnLandLoad(a_land, a_mod);
+			}
+			return result;
+		}
+		static inline REL::Relocation<decltype(Load)> _Load;
+	};
+
 	class Hook_SoundMarkersSetFormEditorID
 	{
 		public:
 			static void install()
 			{
-				//REL::Relocation<std::uintptr_t> BGSSoundDescriptorFormVtbl{ RE::VTABLE_BGSSoundDescriptorForm[0] };
 				REL::Relocation<std::uintptr_t> TESSoundVtbl{ RE::VTABLE_TESSound[0] };
-				//_Descriptor_SetFormEditorID = BGSSoundDescriptorFormVtbl.write_vfunc(0x33, Descriptor_SetFormEditorID);
 				_Sound_SetFormEditorID = TESSoundVtbl.write_vfunc(0x33, Sound_SetFormEditorID);
 
 				logger::debug("hook: SoundMarkersSetFormEditorID");
 			}
 		private:
-			//static bool Descriptor_SetFormEditorID(RE::TESForm* a_form, const char* a_editorID)
-			//{
-			//	if (MCM::settings::modActive)
-			//	{
-			//		DebugMenu::GetMarkerHandler()->soundDescriptorEditorIDs[a_form->GetFormID()] = a_editorID;
-			//	}
-			//
-			//	return _Descriptor_SetFormEditorID(a_form, a_editorID);
-			//}
 
 			static bool Sound_SetFormEditorID(RE::TESForm* a_form, const char* a_editorID)
 			{
@@ -155,8 +167,78 @@ namespace Hooks
 
 				return _Sound_SetFormEditorID(a_form, a_editorID);
 			}
-			//static inline REL::Relocation<decltype(Descriptor_SetFormEditorID)> _Descriptor_SetFormEditorID;
 			static inline REL::Relocation<decltype(Sound_SetFormEditorID)> _Sound_SetFormEditorID;
-			
+	};
+
+	class Hook_FreeCameraState_UpdatePosition_1408E0640
+	{
+		public:
+			static void Install()
+			{
+				logger::debug("Hook: FreeCameraState UpdatePosition_140437D40");
+
+				auto& trampoline = SKSE::GetTrampoline();
+				REL::Relocation<uintptr_t> hook{ RELOCATION_ID(49813, 50743), REL::VariantOffset(0x12, 0x12, 0x12) };
+				_UpdatePosition = trampoline.write_call<5>(hook.address(), UpdatePosition);
+			}
+
+		private:
+			static void UpdatePosition(RE::FreeCameraState* a_freeCameraState)
+			{
+				if (MCM::settings::modActive) 
+				{
+					FreeCamHandler::GetSingleton()->Update();
+				}
+
+				_UpdatePosition(a_freeCameraState);
+				
+				if (MCM::settings::modActive)
+				{
+					FreeCamHandler::GetSingleton()->PostUpdate();
+				}
+
+			}
+			static inline REL::Relocation<decltype(UpdatePosition)> _UpdatePosition;
+	};
+
+	class Hook_FreeCameraBegin
+	{
+		public:
+		static void install()
+		{
+			REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_FreeCameraState[0] };
+			_Begin = vtbl.write_vfunc(0x1, Begin);
+			logger::debug("hook: CameraBegin");
+
+		}
+		private:
+		static void Begin(RE::FreeCameraState* a_camera)
+		{
+			_Begin(a_camera);
+			if (MCM::settings::modActive) FreeCamHandler::GetSingleton()->OnEnterFreeCam();
+
+
+		}
+		static inline REL::Relocation<decltype(Begin)> _Begin;
+	};
+
+	class Hook_FreeCameraEnd
+	{
+		public:
+		static void install()
+		{
+			REL::Relocation<std::uintptr_t> vtbl{ RE::VTABLE_FreeCameraState[0] };
+			_End = vtbl.write_vfunc(0x2, End);
+			logger::debug("hook: CameraEnd");
+
+		}
+		private:
+		static void End(RE::FreeCameraState* a_camera)
+		{
+			if (MCM::settings::modActive) FreeCamHandler::GetSingleton()->OnExitFreeCam();
+			_End(a_camera);
+
+		}
+		static inline REL::Relocation<decltype(End)> _End;
 	};
 }

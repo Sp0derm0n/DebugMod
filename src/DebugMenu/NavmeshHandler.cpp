@@ -50,10 +50,10 @@ namespace DebugMenu
 
 			for (auto& navmesh : cachedNavmeshes[cellID])
 			{
-				auto metaData = CreateMetaData();
-				metaData->formID = navmesh.formID;
-				metaData->cell = a_cell;
-				metaData->infoType = InfoType::kNavmesh;
+				DrawHandler::ShapeMetaData metaData;
+				metaData.formID = navmesh.formID;
+				metaData.cell = a_cell;
+				metaData.infoType = InfoType::kNavmesh;
 
 				auto& vertices = navmesh.vertices;
 				auto& triangles = navmesh.triangles;
@@ -75,7 +75,7 @@ namespace DebugMenu
 					uint16_t triangleFlag = triangle.triangleFlags.underlying();
 
 
-					if (!MCM::settings::useRuntimeNavmesh && !(triangleFlag & inFileFlag))
+					if (MCM::settings::navmeshModeIndex == MCM::settings::NavmeshMode::creationKit && !(triangleFlag & inFileFlag))
 					{
 						if (i + 2 < triangles.size())
 						{
@@ -88,7 +88,7 @@ namespace DebugMenu
 						}
 					}
 
-					if (MCM::settings::useRuntimeNavmesh && triangle.triangleFlags.all(RE::BSNavmeshTriangle::TriangleFlag::kOverlapping))
+					if (MCM::settings::navmeshModeIndex == MCM::settings::NavmeshMode::runtime && triangle.triangleFlags.all(RE::BSNavmeshTriangle::TriangleFlag::kOverlapping))
 					{
 						continue;
 					}
@@ -302,10 +302,10 @@ namespace DebugMenu
 		{
 			RE::NiPoint3 middle = a_leftPoint + directionAlongLine / 2;
 
-			auto metaData = CreateMetaData();
-			metaData->navmeshTraversalFlags = a_traversalFlags;
-			metaData->coverEdge = a_edge;
-			metaData->infoType = InfoType::kNavmeshCover;
+			DrawHandler::ShapeMetaData metaData;
+			metaData.navmeshTraversalFlags = a_traversalFlags;
+			metaData.coverEdge = a_edge;
+			metaData.infoType = InfoType::kNavmeshCover;
 			GetDrawHandler()->DrawPoint(middle, 10, borderColor, borderAlpha, metaData);
 		}
 
@@ -362,7 +362,7 @@ namespace DebugMenu
 
 		RE::FormID formID = a_navmesh->GetFormID();
 
-		if (auto cell = a_navmesh->GetSaveParentCell(); cell)
+		if (auto cell = a_navmesh->GetSaveParentCell())
 		{
 			CacheNavmesh(a_navmesh, cell->GetFormID());
 		}

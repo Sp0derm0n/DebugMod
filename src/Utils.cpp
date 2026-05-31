@@ -553,6 +553,18 @@ namespace Utils
 		return triangleIndices;
 	}
 
+	std::string RemoveWhitespaceFromString(std::string a_string)
+	{
+		std::string newStr;
+		newStr.reserve(a_string.size());
+		std::remove_copy_if(
+			begin(a_string), end(a_string),
+			std::back_inserter(newStr),
+			[l = std::locale{}](auto ch) { return std::isspace(ch, l); }
+		);
+		return newStr;
+	}
+
 
 	std::string GetFormEditorID(const RE::TESForm* a_form)
 	{

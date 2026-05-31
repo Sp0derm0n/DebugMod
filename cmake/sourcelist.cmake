@@ -1,4 +1,5 @@
 set(sources ${sources}
+	src/DebugMenu/BoxHandler.cpp
 	src/DebugMenu/CellHandler.cpp
 	src/DebugMenu/CollisionHandler.cpp
 	src/DebugMenu/DebugItem.cpp
@@ -6,12 +7,23 @@ set(sources ${sources}
 	src/DebugMenu/InfoHandler.cpp
 	src/DebugMenu/MarkerHandler.cpp
 	src/DebugMenu/NavmeshHandler.cpp
-	src/DebugMenu/OcclusionHandler.cpp
 	src/DebugMenu/RefInspectorHandler.cpp
 	src/DebugUIMenu.cpp
 	src/DrawHandler.cpp
 	src/DrawMenu.cpp
-	src/EventSink.cpp
+	src/FreeCamHandler.cpp
+	src/Interface/AnimationHandler.cpp
+	src/Interface/BoundingBox.cpp
+	src/Interface/Button.cpp
+	src/Interface/Element.cpp
+	src/Interface/GroupElement.cpp
+	src/Interface/IElement.cpp
+	src/Interface/InputHandler.cpp
+	src/Interface/Menu.cpp
+	src/Interface/Textfield.cpp
+	src/Interface/UIHandler.cpp
+	src/Interface/UIUtils.cpp
+	src/Interface_prismaUI/InterfaceHandler.cpp
 	src/Linalg.cpp
 	src/MCM.cpp
 	src/RE.cpp
@@ -23,7 +35,6 @@ set(sources ${sources}
 	src/Renderer/Renderer.cpp
 	src/Renderer/Shaders.cpp
 	src/Renderer/VertexBuffer.cpp
-	src/UIHandler.cpp
 	src/Utils.cpp
 	src/main.cpp
 )
