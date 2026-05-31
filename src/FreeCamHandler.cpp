@@ -43,9 +43,12 @@ void FreeCamHandler::HandleInput(uint32_t a_keyCode, bool a_isDown, float a_held
 	if (a_keyCode == MCM::settings::descendHotkey && IsCustomFreeCamEnabled())
 	{
 		Descend();
+		
 	}
 	else if (a_keyCode == MCM::settings::ascendHotkey)
 	{
+		auto freecam = skyrim_cast<RE::FreeCameraState*>(RE::PlayerCamera::GetSingleton()->GetRuntimeData().cameraStates[RE::CameraState::kFree].get());
+		logger::info("freecam x address: {:X}", reinterpret_cast<uintptr_t>(freecam));
 		if (a_isDown)
 		{
 			auto clockNow = std::chrono::system_clock::now();
@@ -104,8 +107,8 @@ void FreeCamHandler::ToggleTFC()
 		playerCamera->ToggleFreeCameraMode(false);
 		auto state = playerCamera->currentState.get();
 		
-		// If useTFC is true, OnEnterCustomFreeCam is called through the FreeCameraState::Begin hook
-		if (!MCM::settings::useTFC && state->id == RE::CameraState::kFree) 
+		// Called twice when useTFC is true, but has to be so, since this must be called
+		if (state->id == RE::CameraState::kFree) 
 		{
 			OnEnterCustomFreeCam();
 		}

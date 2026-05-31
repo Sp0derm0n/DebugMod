@@ -225,7 +225,7 @@ namespace MCM
 					bool				HasParent() const { return parentSetting ? true : false; }
 					ShowMarkerSetting*	GetParent() const { return parentSetting; }
 
-				//private:
+				private:
 					std::string										label = ""s;
 					std::string										instanceName = ""s;
 					bool											enabled = false;
