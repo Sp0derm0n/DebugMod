@@ -2,6 +2,7 @@
 #include <SimpleIni.h>
 #include "DrawHandler.h"
 #include "DebugMenu/DebugMenu.h"
+#include "Interface/UIHandler.h"
 
 namespace MCM
 {
@@ -11,6 +12,7 @@ namespace MCM
 		DebugMenu::GetDrawHandler()->UpdateCanvasScale();
 		DebugMenu::GetMarkerHandler()->HideAllMarkers();
 		DebugMenu::GetCollisionHandler()->HideAllCollisions();
+		ScaleformUI::GetDebugMenuUI()->SetMenuOpenKeyCode(settings::openMenuHotkey);
 		UpdateCollisionColor();
 		if (!settings::modActive)
 		{
